@@ -123,6 +123,7 @@ export type Database = {
           is_active: boolean
           league_id: string
           name: string
+          normalized_name: string
           owner_id: string
           updated_at: string
         }
@@ -135,6 +136,7 @@ export type Database = {
           is_active?: boolean
           league_id: string
           name: string
+          normalized_name: string
           owner_id: string
           updated_at?: string
         }
@@ -147,6 +149,7 @@ export type Database = {
           is_active?: boolean
           league_id?: string
           name?: string
+          normalized_name?: string
           owner_id?: string
           updated_at?: string
         }
@@ -923,6 +926,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_set_user_status: {
+        Args: {
+          _new_status: Database["public"]["Enums"]["user_status"]
+          _reason?: string | null
+          _target_user_id: string
+        }
+        Returns: {
+          audit_log_id: string
+          changed_at: string
+          new_status: Database["public"]["Enums"]["user_status"]
+          previous_status: Database["public"]["Enums"]["user_status"]
+          target_user_id: string
+        }[]
+      }
       _credit_wallet: {
         Args: {
           _amount_cents: number
@@ -956,11 +973,35 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_approved_user: {
+        Args: { _user_id?: string }
+        Returns: boolean
+      }
+      normalize_club_name: {
+        Args: { _name: string }
+        Returns: string
+      }
       open_initial_pack: {
         Args: { _club_id: string }
         Returns: {
           player_id: string
           slot: number
+        }[]
+      }
+      update_club_identity: {
+        Args: {
+          _abbreviation?: string | null
+          _badge_code?: string | null
+          _club_id: string
+          _name?: string | null
+        }
+        Returns: {
+          abbreviation: string
+          badge_id: string
+          club_id: string
+          name: string
+          normalized_name: string
+          updated_at: string
         }[]
       }
     }

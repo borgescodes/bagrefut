@@ -36,8 +36,8 @@ export const listBadges = createServerFn({ method: "GET" })
   });
 
 const createClubInput = z.object({
-  name: z.string().min(3).max(24),
-  abbreviation: z.string().min(2).max(4),
+  name: z.string().min(1),
+  abbreviation: z.string().min(1),
   badgeCode: z.string().min(1),
 });
 
@@ -52,6 +52,27 @@ export const createClub = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { clubId: clubId as string };
+  });
+
+const updateClubIdentityInput = z.object({
+  clubId: z.string().uuid(),
+  name: z.string().nullable().optional(),
+  abbreviation: z.string().nullable().optional(),
+  badgeCode: z.string().nullable().optional(),
+});
+
+export const updateClubIdentity = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => updateClubIdentityInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: club, error } = await context.supabase.rpc("update_club_identity", {
+      _club_id: data.clubId,
+      _name: data.name ?? null,
+      _abbreviation: data.abbreviation ?? null,
+      _badge_code: data.badgeCode ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { club: club?.[0] ?? null };
   });
 
 export const openInitialPack = createServerFn({ method: "POST" })

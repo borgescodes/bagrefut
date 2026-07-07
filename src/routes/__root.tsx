@@ -79,22 +79,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "BagreFut — Monte clube. Gerencie elenco. Domine PGM." },
+      { title: "BagreFut" },
       {
         name: "description",
         content:
-          "BagreFut: gerencie seu clube no Bagreleirão. 10 rodadas, 6 times, decisões todo dia às 22h.",
+          "BagreFut é o jogo de gestão de clube dos amigos: 6 times, 10 rodadas, decisões diárias às 22h.",
       },
       { name: "theme-color", content: "#0b0f14" },
       { property: "og:title", content: "BagreFut" },
-      { property: "og:description", content: "Monte clube. Gerencie elenco. Domine PGM." },
+      { property: "og:description", content: "BagreFut é o jogo de gestão de clube dos amigos: 6 times, 10 rodadas, decisões diárias às 22h." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "BagreFut" },
+      { name: "twitter:description", content: "BagreFut é o jogo de gestão de clube dos amigos: 6 times, 10 rodadas, decisões diárias às 22h." },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "icon", href: "/badges/badge-01.png", type: "image/png" },
     ],
 
   }),

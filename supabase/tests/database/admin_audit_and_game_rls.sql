@@ -148,10 +148,10 @@ BEGIN
     (_admin_pending, 'admin'::public.app_role),
     (_admin_blocked, 'admin'::public.app_role);
 
-  INSERT INTO public.clubs (id, league_id, owner_id, name, abbreviation, badge_id, balance_cents)
+  INSERT INTO public.clubs (id, league_id, owner_id, name, normalized_name, abbreviation, badge_id, balance_cents)
   VALUES
-    (_club_a, _league_id, _user_approved, 'Audit RLS A', 'ARA', _badge_id, 0),
-    (_club_b, _league_id, _target_user, 'Audit RLS B', 'ARB', _badge_id, 0);
+    (_club_a, _league_id, _user_approved, 'Audit RLS A', public.normalize_club_name('Audit RLS A'), 'ARA', _badge_id, 0),
+    (_club_b, _league_id, _target_user, 'Audit RLS B', public.normalize_club_name('Audit RLS B'), 'ARB', _badge_id, 0);
 
   INSERT INTO public.seasons (id, league_id, season_number, status, started_at)
   VALUES (_season_id, _league_id, 11001, 'active', pg_catalog.now());

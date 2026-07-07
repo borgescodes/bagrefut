@@ -115,6 +115,7 @@ BEGIN
       league_id,
       owner_id,
       name,
+      normalized_name,
       abbreviation,
       badge_id,
       balance_cents
@@ -124,6 +125,7 @@ BEGIN
       _league_id,
       _user_ids[_i],
       'Bagre Teste ' || _i::text,
+      public.normalize_club_name('Bagre Teste ' || _i::text),
       (ARRAY['BAA','BBB','BCC','BDD','BEE','BFF','BGG','BHH','BII','BJJ'])[_i],
       _badge_id,
       0

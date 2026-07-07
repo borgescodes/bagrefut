@@ -112,12 +112,12 @@ BEGIN
   SET status = 'blocked'::public.user_status
   WHERE id = _blocked_user_id;
 
-  INSERT INTO public.clubs (id, league_id, owner_id, name, abbreviation, badge_id, balance_cents)
+  INSERT INTO public.clubs (id, league_id, owner_id, name, normalized_name, abbreviation, badge_id, balance_cents)
   VALUES
-    (_owner_club_id, _league_id, _owner_user_id, 'Lineup Owner', 'LOW', _badge_id, 0),
-    (_other_club_id, _league_id, _other_user_id, 'Lineup Other', 'LOT', _badge_id, 0),
-    (_pending_club_id, _league_id, _pending_user_id, 'Lineup Pending', 'LPE', _badge_id, 0),
-    (_blocked_club_id, _league_id, _blocked_user_id, 'Lineup Blocked', 'LBL', _badge_id, 0);
+    (_owner_club_id, _league_id, _owner_user_id, 'Lineup Owner', public.normalize_club_name('Lineup Owner'), 'LOW', _badge_id, 0),
+    (_other_club_id, _league_id, _other_user_id, 'Lineup Other', public.normalize_club_name('Lineup Other'), 'LOT', _badge_id, 0),
+    (_pending_club_id, _league_id, _pending_user_id, 'Lineup Pending', public.normalize_club_name('Lineup Pending'), 'LPE', _badge_id, 0),
+    (_blocked_club_id, _league_id, _blocked_user_id, 'Lineup Blocked', public.normalize_club_name('Lineup Blocked'), 'LBL', _badge_id, 0);
 
   INSERT INTO public.seasons (id, league_id, season_number, status, started_at)
   VALUES (_season_id, _league_id, 9101, 'active', pg_catalog.now());

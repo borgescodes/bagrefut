@@ -8,7 +8,7 @@ corretivas:
 | `profiles`               | Proprio; admin approved le tudo         | Nenhum; status so por RPC       |
 | `user_roles`             | Approved: propria role; admin le tudo   | Nenhum; so service_role         |
 | `leagues`                | Apenas approved                         | Nenhum                          |
-| `club_badges`            | Apenas approved, ativos                 | Nenhum                          |
+| `club_badges`            | Approved ativos; admin approved todos   | Nenhum                          |
 | `clubs`                  | Apenas approved                         | Nenhum; so RPCs                 |
 | `players`                | Apenas approved                         | Nenhum                          |
 | `club_players`           | Approved: proprio clube; admin le tudo  | Nenhum; so RPCs                 |
@@ -51,6 +51,7 @@ Todas seguem o padrao obrigatorio:
 | `public._credit_wallet(...)`                       | service_role  | Interna; chamada por RPCs            |
 | `public._debit_wallet(...)`                        | service_role  | Interna; chamada por RPCs            |
 | `public.create_club(name, abbr, badge)`            | authenticated | Cria clube atomico + saldo + pacote  |
+| `public.update_club_identity(club,name,abbr,badge)` | authenticated | Edita identidade do clube via regras |
 | `public.open_initial_pack(club_id)`                | authenticated | Sorteia pacote inicial atomico       |
 | `public.save_lineup(round, formation, style, json)`| authenticated | Salva escalacao validada             |
 | `public.admin_set_user_status(target,status,reason)` | authenticated | Status + audit atomicos            |

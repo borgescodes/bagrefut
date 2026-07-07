@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { registerServiceWorker } from "../lib/pwa";
+
 
 function NotFoundComponent() {
   return (
@@ -77,22 +79,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "BagreFut — Monte clube. Gerencie elenco. Domine PGM." },
+      {
+        name: "description",
+        content:
+          "BagreFut: gerencie seu clube no Bagreleirão. 10 rodadas, 6 times, decisões todo dia às 22h.",
+      },
+      { name: "theme-color", content: "#0b0f14" },
+      { property: "og:title", content: "BagreFut" },
+      { property: "og:description", content: "Monte clube. Gerencie elenco. Domine PGM." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:card", content: "summary" },
     ],
     links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", href: "/badges/badge-01.png", type: "image/png" },
     ],
+
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -116,6 +120,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -124,3 +131,4 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
+

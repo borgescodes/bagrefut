@@ -9,38 +9,166 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as AguardandoAprovacaoRouteImport } from './routes/aguardando-aprovacao'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedCriarClubeRouteImport } from './routes/_authenticated/criar-clube'
+import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAbrirPacoteRouteImport } from './routes/_authenticated/abrir-pacote'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastroRoute = CadastroRouteImport.update({
+  id: '/cadastro',
+  path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AguardandoAprovacaoRoute = AguardandoAprovacaoRouteImport.update({
+  id: '/aguardando-aprovacao',
+  path: '/aguardando-aprovacao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedCriarClubeRoute = AuthenticatedCriarClubeRouteImport.update({
+  id: '/criar-clube',
+  path: '/criar-clube',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAbrirPacoteRoute =
+  AuthenticatedAbrirPacoteRouteImport.update({
+    id: '/abrir-pacote',
+    path: '/abrir-pacote',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/aguardando-aprovacao': typeof AguardandoAprovacaoRoute
+  '/cadastro': typeof CadastroRoute
+  '/login': typeof LoginRoute
+  '/abrir-pacote': typeof AuthenticatedAbrirPacoteRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/app': typeof AuthenticatedAppRoute
+  '/criar-clube': typeof AuthenticatedCriarClubeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aguardando-aprovacao': typeof AguardandoAprovacaoRoute
+  '/cadastro': typeof CadastroRoute
+  '/login': typeof LoginRoute
+  '/abrir-pacote': typeof AuthenticatedAbrirPacoteRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/app': typeof AuthenticatedAppRoute
+  '/criar-clube': typeof AuthenticatedCriarClubeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/aguardando-aprovacao': typeof AguardandoAprovacaoRoute
+  '/cadastro': typeof CadastroRoute
+  '/login': typeof LoginRoute
+  '/_authenticated/abrir-pacote': typeof AuthenticatedAbrirPacoteRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/app': typeof AuthenticatedAppRoute
+  '/_authenticated/criar-clube': typeof AuthenticatedCriarClubeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/aguardando-aprovacao'
+    | '/cadastro'
+    | '/login'
+    | '/abrir-pacote'
+    | '/admin'
+    | '/app'
+    | '/criar-clube'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/aguardando-aprovacao'
+    | '/cadastro'
+    | '/login'
+    | '/abrir-pacote'
+    | '/admin'
+    | '/app'
+    | '/criar-clube'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/aguardando-aprovacao'
+    | '/cadastro'
+    | '/login'
+    | '/_authenticated/abrir-pacote'
+    | '/_authenticated/admin'
+    | '/_authenticated/app'
+    | '/_authenticated/criar-clube'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AguardandoAprovacaoRoute: typeof AguardandoAprovacaoRoute
+  CadastroRoute: typeof CadastroRoute
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadastro': {
+      id: '/cadastro'
+      path: '/cadastro'
+      fullPath: '/cadastro'
+      preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aguardando-aprovacao': {
+      id: '/aguardando-aprovacao'
+      path: '/aguardando-aprovacao'
+      fullPath: '/aguardando-aprovacao'
+      preLoaderRoute: typeof AguardandoAprovacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +176,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/criar-clube': {
+      id: '/_authenticated/criar-clube'
+      path: '/criar-clube'
+      fullPath: '/criar-clube'
+      preLoaderRoute: typeof AuthenticatedCriarClubeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/abrir-pacote': {
+      id: '/_authenticated/abrir-pacote'
+      path: '/abrir-pacote'
+      fullPath: '/abrir-pacote'
+      preLoaderRoute: typeof AuthenticatedAbrirPacoteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAbrirPacoteRoute: typeof AuthenticatedAbrirPacoteRoute
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAppRoute: typeof AuthenticatedAppRoute
+  AuthenticatedCriarClubeRoute: typeof AuthenticatedCriarClubeRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAbrirPacoteRoute: AuthenticatedAbrirPacoteRoute,
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAppRoute: AuthenticatedAppRoute,
+  AuthenticatedCriarClubeRoute: AuthenticatedCriarClubeRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AguardandoAprovacaoRoute: AguardandoAprovacaoRoute,
+  CadastroRoute: CadastroRoute,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

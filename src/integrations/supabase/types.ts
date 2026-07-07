@@ -923,6 +923,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_set_user_status: {
+        Args: {
+          _new_status: Database["public"]["Enums"]["user_status"]
+          _reason?: string | null
+          _target_user_id: string
+        }
+        Returns: {
+          audit_log_id: string
+          changed_at: string
+          new_status: Database["public"]["Enums"]["user_status"]
+          previous_status: Database["public"]["Enums"]["user_status"]
+          target_user_id: string
+        }[]
+      }
       _credit_wallet: {
         Args: {
           _amount_cents: number
@@ -954,6 +968,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_approved_user: {
+        Args: { _user_id?: string }
         Returns: boolean
       }
       open_initial_pack: {

@@ -92,6 +92,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "BagreFut" },
       { name: "twitter:description", content: "BagreFut é o jogo de gestão de clube dos amigos: 6 times, 10 rodadas, decisões diárias às 22h." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d78104e3-c5c2-4e71-9420-c27d4f180266/id-preview-488cf348--55231010-84ab-401d-bb16-d525e1c2af2f.lovable.app-1783456842408.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d78104e3-c5c2-4e71-9420-c27d4f180266/id-preview-488cf348--55231010-84ab-401d-bb16-d525e1c2af2f.lovable.app-1783456842408.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

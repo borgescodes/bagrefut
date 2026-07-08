@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { mapAuthErrorMessage } from "@/domain/rules/auth";
 import {
   usernameToInternalEmail,
   validatePassword,
+  validatePasswordConfirmation,
   validateUsername,
 } from "@/domain/rules/validators";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/cadastro")({
   component: CadastroPage,
@@ -21,6 +23,7 @@ function CadastroPage() {
   const nav = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -28,9 +31,11 @@ function CadastroPage() {
     e.preventDefault();
     setError(null);
     const u = validateUsername(username);
-    if (!u.ok) return setError(u.error);
+    if (!u.ok) return setError(validationMessage(u.error));
     const p = validatePassword(password);
-    if (!p.ok) return setError(p.error);
+    if (!p.ok) return setError(validationMessage(p.error));
+    const pc = validatePasswordConfirmation(password, passwordConfirmation);
+    if (!pc.ok) return setError(validationMessage(pc.error));
 
     setBusy(true);
     const { error } = await supabase.auth.signUp({
@@ -39,7 +44,7 @@ function CadastroPage() {
       options: { data: { username } },
     });
     setBusy(false);
-    if (error) return setError(error.message);
+    if (error) return setError(mapAuthErrorMessage(error.message));
     await supabase.auth.signOut();
     nav({ to: "/aguardando-aprovacao" });
   }
@@ -73,6 +78,17 @@ function CadastroPage() {
               required
             />
           </label>
+          <label className="block text-sm">
+            <span className="mb-1 block">Confirmar senha</span>
+            <input
+              type="password"
+              value={passwordConfirmation}
+              onChange={(e) => setPasswordConfirmation(e.target.value)}
+              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+              autoComplete="new-password"
+              required
+            />
+          </label>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button
             type="submit"
@@ -83,9 +99,25 @@ function CadastroPage() {
           </button>
         </form>
         <p className="mt-4 text-sm">
-          <Link to="/login" className="underline">Já tem conta? Entrar</Link>
+          <Link to="/login" className="underline">
+            Já tem conta? Entrar
+          </Link>
         </p>
       </div>
     </main>
   );
+}
+
+function validationMessage(code: string): string {
+  const messages: Record<string, string> = {
+    username_required: "Informe um nome de usuário.",
+    username_invalid_format: "Use 3 a 16 letras e números no nome de usuário.",
+    password_required: "Informe uma senha.",
+    password_length: "A senha deve ter entre 8 e 32 caracteres.",
+    password_missing_letter: "A senha deve ter pelo menos uma letra.",
+    password_missing_number: "A senha deve ter pelo menos um número.",
+    password_confirmation_required: "Confirme sua senha.",
+    password_confirmation_mismatch: "As senhas não conferem.",
+  };
+  return messages[code] ?? "Não foi possível concluir. Tente novamente.";
 }

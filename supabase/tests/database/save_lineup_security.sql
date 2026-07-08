@@ -162,9 +162,18 @@ BEGIN
     )
     RETURNING id INTO _player_id;
 
-    INSERT INTO public.club_players (club_id, player_id, is_reserved)
-    VALUES (_owner_club_id, _player_id, false)
-    RETURNING id INTO _club_player_id;
+    SELECT cp.id INTO _club_player_id
+    FROM public.club_players cp
+    WHERE cp.player_id = _player_id
+    FOR UPDATE;
+
+    DELETE FROM public.system_market_stock sms
+    WHERE sms.club_player_id = _club_player_id;
+
+    UPDATE public.club_players
+    SET club_id = _owner_club_id,
+        is_reserved = false
+    WHERE id = _club_player_id;
 
     _owner_cards := _owner_cards || _club_player_id;
   END LOOP;
@@ -204,9 +213,18 @@ BEGIN
     )
     RETURNING id INTO _player_id;
 
-    INSERT INTO public.club_players (club_id, player_id, is_reserved)
-    VALUES (_other_club_id, _player_id, false)
-    RETURNING id INTO _club_player_id;
+    SELECT cp.id INTO _club_player_id
+    FROM public.club_players cp
+    WHERE cp.player_id = _player_id
+    FOR UPDATE;
+
+    DELETE FROM public.system_market_stock sms
+    WHERE sms.club_player_id = _club_player_id;
+
+    UPDATE public.club_players
+    SET club_id = _other_club_id,
+        is_reserved = false
+    WHERE id = _club_player_id;
 
     _other_cards := _other_cards || _club_player_id;
   END LOOP;

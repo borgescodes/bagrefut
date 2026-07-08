@@ -80,10 +80,17 @@ export interface Player extends PlayerAttributes {
 
 export interface ClubPlayer {
   id: string;
-  club_id: string;
+  club_id: string | null;
   player_id: string;
   acquired_at: string;
   is_reserved: boolean;
+}
+
+export interface SystemMarketStock {
+  club_player_id: string;
+  acquired_from_club_id: string | null;
+  acquired_price_cents: number;
+  acquired_at: string;
 }
 
 export interface InitialPack {
@@ -169,6 +176,21 @@ export interface TrainingSession {
   cost_cents: number;
   day: string;
   progress_delta: number;
+  progress_before: number | null;
+  progress_after: number | null;
+  attribute_before: number | null;
+  attribute_after: number | null;
+  overall_before: number | null;
+  overall_after: number | null;
+  reference_value_before_cents: number | null;
+  reference_value_after_cents: number | null;
+}
+
+export interface ClubPlayerAttributeProgress {
+  club_player_id: string;
+  attribute: PlayerAttributeKey;
+  progress: number;
+  updated_at: string;
 }
 
 export interface MarketListing {

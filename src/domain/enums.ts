@@ -49,12 +49,7 @@ export type MatchEventType =
   | "match_finished";
 
 export type MarketListingStatus = "open" | "sold" | "cancelled" | "expired";
-export type TransferOfferStatus =
-  | "pending"
-  | "accepted"
-  | "rejected"
-  | "cancelled"
-  | "expired";
+export type TransferOfferStatus = "pending" | "accepted" | "rejected" | "cancelled" | "expired";
 
 export type WalletTransactionType =
   | "initial_credit"
@@ -86,3 +81,13 @@ export type PlayerAttributeKey =
   | "defending"
   | "physical"
   | "goalkeeping";
+
+export const PLAYER_ATTRIBUTE_KEYS = [
+  "velocity",
+  "finishing",
+  "passing",
+  "dribbling",
+  "defending",
+  "physical",
+  "goalkeeping",
+] as const satisfies readonly PlayerAttributeKey[];

@@ -129,7 +129,7 @@ WITH new_badges AS (
     '/badges/badge-' || (CASE WHEN g.i < 100 THEN pg_catalog.lpad(g.i::text, 2, '0') ELSE g.i::text END) || '.png' AS asset_path,
     g.i AS sort_order,
     true AS is_active
-  FROM pg_catalog.generate_series(1, 264) AS g(i)
+  FROM pg_catalog.generate_series(1, 66) AS g(i)
 )
 INSERT INTO public.club_badges (code, label, asset_path, sort_order, is_active)
 SELECT nb.code, nb.label, nb.asset_path, nb.sort_order, nb.is_active
@@ -142,7 +142,7 @@ SET label = EXCLUDED.label,
 
 WITH new_badges AS (
   SELECT 'badge-' || (CASE WHEN g.i < 100 THEN pg_catalog.lpad(g.i::text, 2, '0') ELSE g.i::text END) AS code
-  FROM pg_catalog.generate_series(1, 264) AS g(i)
+  FROM pg_catalog.generate_series(1, 66) AS g(i)
 )
 UPDATE public.club_badges b
 SET is_active = false
@@ -532,6 +532,7 @@ GRANT SELECT ON TABLE public.club_badges TO authenticated;
 
 DROP POLICY IF EXISTS "club_badges_authenticated_read" ON public.club_badges;
 DROP POLICY IF EXISTS "club_badges_approved_read" ON public.club_badges;
+DROP POLICY IF EXISTS "club_badges_approved_active_or_admin_read" ON public.club_badges;
 
 CREATE POLICY "club_badges_approved_active_or_admin_read"
 ON public.club_badges

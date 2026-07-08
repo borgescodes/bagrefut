@@ -42,7 +42,15 @@ wrappers finos que só validam formato e delegam.
   `_credit_wallet`/`_debit_wallet` (executáveis somente por `service_role`
   via RPCs `SECURITY DEFINER`).
 - Nenhuma policy de mutação em `club_players` para usuário — transferência
-  de cartas só via RPCs (pendentes: `market_buy`, `transfer_offer_accept`).
+  de cartas só via RPCs. Venda/compra contra o sistema usam
+  `sell_player_to_system` e `buy_player_from_system`; mercado P2P e trocas
+  continuam pendentes.
+- `club_players` é a carta permanente. `club_id IS NULL` representa posse do
+  sistema e deve ter linha correspondente em `system_market_stock`; `club_id IS
+NOT NULL` representa posse de clube e não pode ter linha no estoque. Constraint
+  triggers deferíveis validam essa invariante no fim da transação.
+- OVR e preço de referência de `players` são derivados por trigger no Postgres.
+  Inserts/updates nunca preservam valores inconsistentes enviados pelo app.
 
 ## Migrations
 
@@ -63,15 +71,32 @@ Migrations já aplicadas:
    `transfer_offers`, `transfer_offer_items`, `push_subscriptions`,
    `admin_audit_logs`.
 5. Seed de 60 jogadores.
+6. OVR/preço derivados, correção determinística dos 60 jogadores,
+   `system_market_stock`, carta permanente, pacote inicial via estoque, mercado
+   clube-sistema e treino persistente por carta/atributo.
 
 ## Auth
 
 - Username + senha (nunca e-mail no fluxo do usuário).
 - E-mail interno derivado: `{username}@bagrefut.local`.
+- E-mails internos `@bagrefut.local` não são entregáveis. Confirmação de
+  e-mail deve permanecer desativada no Lovable Cloud; recuperação por e-mail
+  não deve ser usada.
 - Cadastro → `profiles.status = 'pending'` via trigger `on_auth_user_created`.
 - Admin aprova via `/admin` (RPC service-role no servidor).
+- Recuperação de senha ocorre via WhatsApp. O admin gera uma senha temporária
+  no servidor, recebe o segredo uma vez e entrega por canal seguro.
+- Senha temporária grava `auth.users.app_metadata.must_change_password = true`
+  preservando demais metadados. Enquanto essa flag estiver ativa,
+  `/_authenticated/route.tsx` redireciona qualquer rota autenticada para
+  `/trocar-senha`, exceto a própria rota de troca.
+- A troca de senha usa `changeTemporaryPassword`, sempre com `context.userId`;
+  o client nunca envia `userId` e nenhuma senha é persistida ou auditada.
 - Login em `/login`. `/_authenticated/route.tsx` (ssr:false) redireciona
   para `/login` se não houver sessão.
+
+- Supabase Auth Admin API e `admin_audit_logs` não estão na mesma transação
+  Postgres; a arquitetura não alega atomicidade entre esses dois sistemas.
 
 ## PWA
 

@@ -84,6 +84,14 @@ BEGIN
     RAISE EXCEPTION 'test_setup_failed: expected active badge catalog not found';
   END IF;
 
+  SELECT pg_catalog.count(*) INTO _count
+  FROM public.club_badges b
+  WHERE b.is_active;
+
+  IF _count <> 66 THEN
+    RAISE EXCEPTION 'expected exactly 66 active canonical badges, got %', _count;
+  END IF;
+
   DELETE FROM public.admin_audit_logs aal
   WHERE aal.admin_id = ANY(_all_users)
      OR aal.target_id IN (_club_setup, _club_active, _club_finished, _club_other);

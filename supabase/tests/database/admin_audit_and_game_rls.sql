@@ -83,6 +83,11 @@ BEGIN
   DELETE FROM public.seasons s
   WHERE s.id = _season_id;
 
+  DELETE FROM public.club_players cp
+  USING public.players p
+  WHERE cp.player_id = p.id
+    AND (p.id = _player_id OR p.code = 'BFAUDIT-RLS-01');
+
   DELETE FROM public.players p
   WHERE p.id = _player_id
      OR p.code = 'BFAUDIT-RLS-01';

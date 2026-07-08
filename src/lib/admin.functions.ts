@@ -3,6 +3,73 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { validatePassword } from "@/domain/rules/validators";
+
+export const TEMPORARY_PASSWORD_MIN_LENGTH = 12;
+
+const TEMPORARY_PASSWORD_UPPERCASE = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+const TEMPORARY_PASSWORD_LOWERCASE = "abcdefghijkmnopqrstuvwxyz";
+const TEMPORARY_PASSWORD_NUMBERS = "23456789";
+const TEMPORARY_PASSWORD_ALPHABET =
+  TEMPORARY_PASSWORD_UPPERCASE + TEMPORARY_PASSWORD_LOWERCASE + TEMPORARY_PASSWORD_NUMBERS;
+
+function secureRandomIndex(length: number): number {
+  if (length <= 0) throw new Error("invalid_random_range");
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi?.getRandomValues) throw new Error("secure_random_unavailable");
+
+  const max = 0xffffffff;
+  const limit = max - (max % length);
+  const bytes = new Uint32Array(1);
+  do {
+    cryptoApi.getRandomValues(bytes);
+  } while (bytes[0] >= limit);
+  return bytes[0] % length;
+}
+
+function pickSecureChar(alphabet: string): string {
+  return alphabet[secureRandomIndex(alphabet.length)];
+}
+
+function shuffleSecure(chars: string[]): string[] {
+  const shuffled = [...chars];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = secureRandomIndex(index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
+export function generateTemporaryPassword(length = TEMPORARY_PASSWORD_MIN_LENGTH): string {
+  const safeLength = Math.max(length, TEMPORARY_PASSWORD_MIN_LENGTH);
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const chars = [
+      pickSecureChar(TEMPORARY_PASSWORD_UPPERCASE),
+      pickSecureChar(TEMPORARY_PASSWORD_LOWERCASE),
+      pickSecureChar(TEMPORARY_PASSWORD_NUMBERS),
+    ];
+    while (chars.length < safeLength) chars.push(pickSecureChar(TEMPORARY_PASSWORD_ALPHABET));
+    const password = shuffleSecure(chars).join("");
+    if (validatePassword(password).ok) return password;
+  }
+  throw new Error("temporary_password_generation_failed");
+}
+
+export function buildPasswordResetAppMetadata(
+  appMetadata: Record<string, unknown> | null | undefined,
+) {
+  return {
+    ...(appMetadata ?? {}),
+    must_change_password: true,
+  };
+}
+
+export function buildPasswordResetAuditPayload() {
+  return {
+    result: "temporary_password_created",
+    must_change_password: true,
+  };
+}
 
 async function assertApprovedAdmin(ctx: { supabase: SupabaseClient<Database>; userId: string }) {
   const [approvedRes, roleRes] = await Promise.all([
@@ -36,11 +103,13 @@ export const adminListPendingUsers = createServerFn({ method: "GET" })
 export const adminSetUserStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({
-      userId: z.string().uuid(),
-      status: z.enum(["pending", "approved", "blocked"]),
-      reason: z.string().trim().max(500).optional(),
-    }).parse(data),
+    z
+      .object({
+        userId: z.string().uuid(),
+        status: z.enum(["pending", "approved", "blocked"]),
+        reason: z.string().trim().max(500).optional(),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("admin_set_user_status", {
@@ -65,19 +134,32 @@ export const adminResetUserPassword = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertApprovedAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Generate a random 12-char password with letters+digits.
-    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-    const bytes = new Uint8Array(12);
-    crypto.getRandomValues(bytes);
-    let tempPassword = "";
-    for (const b of bytes) tempPassword += alphabet[b % alphabet.length];
-    // Ensure it satisfies our client-side password rule (letter + digit).
-    tempPassword = tempPassword.replace(/^(.)/, "A").replace(/(.)$/, "1");
 
-    const { data: updatedUser, error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
-      password: tempPassword,
-    });
-    if (error) throw new Error(error.message);
+    const { data: targetProfile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("id, username")
+      .eq("id", data.userId)
+      .maybeSingle();
+    if (profileError) throw new Error(profileError.message);
+    if (!targetProfile) throw new Error("target_profile_not_found");
+
+    const { data: targetAuthUser, error: targetAuthError } =
+      await supabaseAdmin.auth.admin.getUserById(data.userId);
+    if (targetAuthError || !targetAuthUser?.user) throw new Error("target_auth_user_not_found");
+
+    const tempPassword = generateTemporaryPassword();
+    const appMetadata = buildPasswordResetAppMetadata(
+      (targetAuthUser.user.app_metadata ?? {}) as Record<string, unknown>,
+    );
+
+    const { data: updatedUser, error } = await supabaseAdmin.auth.admin.updateUserById(
+      data.userId,
+      {
+        password: tempPassword,
+        app_metadata: appMetadata,
+      },
+    );
+    if (error) throw new Error("password_update_failed");
     if (!updatedUser?.user?.id) throw new Error("password_update_missing_user");
 
     const { error: auditError } = await supabaseAdmin.from("admin_audit_logs").insert({
@@ -85,13 +167,9 @@ export const adminResetUserPassword = createServerFn({ method: "POST" })
       action: "reset_user_password",
       target_table: "auth.users",
       target_id: data.userId,
-      payload: {
-        result: "password_updated",
-        auth_user_id: updatedUser.user.id,
-        audit_atomic: false,
-      },
+      payload: buildPasswordResetAuditPayload(),
     });
     if (auditError) throw new Error(`password_updated_but_audit_failed: ${auditError.message}`);
 
-    return { tempPassword };
+    return { tempPassword, username: targetProfile.username };
   });

@@ -261,20 +261,23 @@ BEGIN
     RAISE EXCEPTION 'assertion_failed: two clubs share players';
   END IF;
 
-  -- Leave only nine unowned players, then verify the next open rolls back fully.
-  INSERT INTO public.club_players (club_id, player_id)
-  SELECT _sink_club_id, available.id
-  FROM (
-    SELECT p.id
-    FROM public.players p
-    WHERE NOT EXISTS (
-      SELECT 1
-      FROM public.club_players cp
-      WHERE cp.player_id = p.id
-    )
-    ORDER BY p.id
+  -- Leave only nine cards in system stock, then verify the next open rolls back fully.
+  WITH moved AS (
+    SELECT sms.club_player_id
+    FROM public.system_market_stock sms
+    ORDER BY sms.club_player_id
     OFFSET 9
-  ) AS available;
+  ),
+  deleted_stock AS (
+    DELETE FROM public.system_market_stock sms
+    USING moved
+    WHERE sms.club_player_id = moved.club_player_id
+    RETURNING sms.club_player_id
+  )
+  UPDATE public.club_players cp
+  SET club_id = _sink_club_id
+  FROM deleted_stock ds
+  WHERE cp.id = ds.club_player_id;
 
   PERFORM pg_catalog.set_config('request.jwt.claim.sub', _user_ids[10]::text, true);
   BEGIN

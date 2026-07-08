@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 import {
   adminListPendingUsers,
   adminResetUserPassword,
   adminSetUserStatus,
 } from "@/lib/admin.functions";
-import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
@@ -19,7 +19,10 @@ function AdminPage() {
   const qc = useQueryClient();
 
   const list = useQuery({ queryKey: ["admin", "users"], queryFn: () => listFn() });
-  const [tempPassword, setTempPassword] = useState<{ userId: string; pw: string } | null>(null);
+  const [tempPassword, setTempPassword] = useState<{ username: string; password: string } | null>(
+    null,
+  );
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   const setStatus = useMutation({
     mutationFn: (v: { userId: string; status: "approved" | "blocked" | "pending" }) =>
@@ -29,11 +32,31 @@ function AdminPage() {
 
   const reset = useMutation({
     mutationFn: (userId: string) => resetFn({ data: { userId } }),
-    onSuccess: (data, userId) => setTempPassword({ userId, pw: data.tempPassword }),
+    onMutate: () => {
+      setTempPassword(null);
+      setCopyFeedback(null);
+    },
+    onSuccess: (data) => setTempPassword({ username: data.username, password: data.tempPassword }),
   });
 
-  if (list.isLoading) return <Shell>Carregando…</Shell>;
-  if (list.error) return <Shell><p className="text-red-400">{String(list.error)}</p></Shell>;
+  async function copyPassword() {
+    if (!tempPassword) return;
+    await navigator.clipboard.writeText(tempPassword.password);
+    setCopyFeedback("Senha copiada.");
+  }
+
+  function resetPasswordForUser(user: { id: string; username: string }) {
+    if (!window.confirm(`Gerar senha temporária para ${user.username}?`)) return;
+    reset.mutate(user.id);
+  }
+
+  if (list.isLoading) return <Shell>Carregando...</Shell>;
+  if (list.error)
+    return (
+      <Shell>
+        <p className="text-red-400">{adminErrorMessage(list.error)}</p>
+      </Shell>
+    );
 
   return (
     <Shell>
@@ -59,34 +82,83 @@ function AdminPage() {
                 {u.status !== "approved" && (
                   <button
                     onClick={() => setStatus.mutate({ userId: u.id, status: "approved" })}
-                    className="rounded-md border border-slate-700 px-2 py-1 text-xs"
-                  >Aprovar</button>
+                    disabled={setStatus.isPending || reset.isPending}
+                    className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+                  >
+                    Aprovar
+                  </button>
                 )}
                 {u.status !== "blocked" && (
                   <button
                     onClick={() => setStatus.mutate({ userId: u.id, status: "blocked" })}
-                    className="rounded-md border border-slate-700 px-2 py-1 text-xs"
-                  >Bloquear</button>
+                    disabled={setStatus.isPending || reset.isPending}
+                    className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+                  >
+                    Bloquear
+                  </button>
                 )}
                 <button
-                  onClick={() => reset.mutate(u.id)}
-                  className="rounded-md border border-slate-700 px-2 py-1 text-xs"
-                >Nova senha</button>
+                  onClick={() => resetPasswordForUser(u)}
+                  disabled={reset.isPending || setStatus.isPending}
+                  className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+                >
+                  Gerar senha temporária
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
+      {reset.error && <p className="mt-4 text-sm text-red-400">{adminErrorMessage(reset.error)}</p>}
+
       {tempPassword && (
         <div className="mt-6 rounded-md border border-amber-700 bg-amber-950/40 p-3 text-sm">
-          Senha temporária para <b>{tempPassword.userId.slice(0, 8)}…</b>:{" "}
-          <code className="font-mono">{tempPassword.pw}</code>
-          <p className="mt-1 text-xs text-amber-200">Informe ao usuário por canal seguro. Não será mostrada de novo.</p>
+          <p>
+            Senha temporária gerada para <b>{tempPassword.username}</b>
+          </p>
+          <code className="mt-2 block font-mono text-base">{tempPassword.password}</code>
+          <p className="mt-2 text-xs text-amber-200">
+            Copie agora e envie ao usuário por canal seguro. A senha não será mostrada novamente.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={copyPassword}
+              className="rounded-md border border-amber-600 px-2 py-1 text-xs"
+            >
+              Copiar senha
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTempPassword(null);
+                setCopyFeedback(null);
+              }}
+              className="rounded-md border border-slate-700 px-2 py-1 text-xs"
+            >
+              Fechar
+            </button>
+          </div>
+          {copyFeedback && <p className="mt-2 text-xs text-amber-100">{copyFeedback}</p>}
         </div>
       )}
     </Shell>
   );
+}
+
+function adminErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const messages: Record<string, string> = {
+    profile_not_approved: "Sua conta ainda não está aprovada para ações administrativas.",
+    forbidden_not_admin: "Você não tem permissão de administrador.",
+    target_profile_not_found: "Usuário alvo não encontrado no cadastro.",
+    target_auth_user_not_found: "Usuário alvo não encontrado no Auth.",
+    password_update_failed: "Não foi possível atualizar a senha.",
+    password_update_missing_user: "A atualização não retornou o usuário alterado.",
+  };
+  const code = Object.keys(messages).find((key) => message.includes(key));
+  return code ? messages[code] : "Não foi possível concluir. Tente novamente.";
 }
 
 function Shell({ children }: { children: React.ReactNode }) {

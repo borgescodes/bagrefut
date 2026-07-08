@@ -22,6 +22,17 @@ export function validatePassword(input: string): ValidationResult {
   return { ok: true };
 }
 
+export function validatePasswordConfirmation(
+  password: string,
+  confirmation: string,
+): ValidationResult {
+  if (typeof confirmation !== "string" || confirmation.length === 0) {
+    return { ok: false, error: "password_confirmation_required" };
+  }
+  if (password !== confirmation) return { ok: false, error: "password_confirmation_mismatch" };
+  return { ok: true };
+}
+
 export function validateClubName(input: string): ValidationResult {
   if (typeof input !== "string") return { ok: false, error: "name_required" };
   const trimmed = input.trim();
@@ -43,7 +54,8 @@ export const MAX_PRICE_CENTS = 10_000; // R$ 100,00
 
 export function validatePriceCents(input: number): ValidationResult {
   if (!Number.isInteger(input)) return { ok: false, error: "price_not_integer" };
-  if (input < MIN_PRICE_CENTS || input > MAX_PRICE_CENTS) return { ok: false, error: "price_out_of_range" };
+  if (input < MIN_PRICE_CENTS || input > MAX_PRICE_CENTS)
+    return { ok: false, error: "price_out_of_range" };
   return { ok: true };
 }
 

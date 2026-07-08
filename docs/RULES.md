@@ -15,8 +15,28 @@
 | paia     | 60-74 | R$ 5,01 - R$ 25,00  |
 | pika     | 75-89 | R$ 25,01 - R$ 100,00 |
 
+- A interpolação é linear dentro da raridade e do OVR.
+- Depois da interpolação aplica-se multiplicador por posição:
+  - GK: `0.90`
+  - DEF: `0.95`
+  - MID: `1.00`
+  - ATA: `1.10`
+- Depois do multiplicador: arredonda para cents, limita dentro da faixa da
+  raridade e aplica teto global de R$ 100,00.
 - Sistema compra a **50%** do preço de referência.
 - Sistema vende a **100%** do preço de referência.
+- Elenco deve ficar entre **5 e 15 cartas**. Venda ao sistema é bloqueada com
+  5 cartas; compra do sistema é bloqueada com 15 cartas.
+
+## Carta permanente e estoque do sistema
+
+- `club_players` é a instância única e permanente da carta.
+- `club_players.club_id IS NOT NULL`: carta pertence a um clube.
+- `club_players.club_id IS NULL`: carta pertence ao sistema.
+- `system_market_stock` lista explicitamente as cartas do sistema.
+- A carta nunca é deletada/recriada em compra ou venda; a propriedade muda por
+  `UPDATE club_players.club_id`.
+- Todo jogador tem exatamente uma carta por `club_players.player_id UNIQUE`.
 
 ## Overall (`src/domain/calculators/overall.ts`)
 
@@ -26,6 +46,20 @@ Média ponderada por posição. Pesos somam 100:
 - **DEF**: defending 40, physical 25, velocity 15, passing 15, dribbling 5.
 - **MID**: passing 30, dribbling 25, velocity 15, physical 15, defending 10, finishing 5.
 - **ATA**: finishing 40, velocity 20, dribbling 20, physical 10, passing 10.
+
+## Treino
+
+- Um treino por clube por dia, usando o dia em `America/Belem`.
+- Custos por sessão:
+  - peba: 25 cents.
+  - paia: 75 cents.
+  - pika: 150 cents.
+- Cada treino escolhe uma carta e um atributo.
+- Progresso por carta/atributo fica em `club_player_attribute_progress`.
+- Progressão: `0 -> 1 -> 2 -> 0`; ao completar 3 pontos, o atributo aumenta
+  `+1` e OVR/preço são recalculados por trigger.
+- O custo é cobrado mesmo quando o treino ainda não gera `+1`.
+- Atributo máximo: 99.
 
 ## Multiplicador de improviso
 

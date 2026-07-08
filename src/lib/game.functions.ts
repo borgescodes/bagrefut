@@ -77,9 +77,9 @@ export const updateClubIdentity = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: club, error } = await context.supabase.rpc("update_club_identity", {
       _club_id: data.clubId,
-      _name: data.name ?? null,
-      _abbreviation: data.abbreviation ?? null,
-      _badge_code: data.badgeCode ?? null,
+      _name: data.name ?? undefined,
+      _abbreviation: data.abbreviation ?? undefined,
+      _badge_code: data.badgeCode ?? undefined,
     });
     if (error) throw new Error(error.message);
     return { club: club?.[0] ?? null };
@@ -273,7 +273,7 @@ async function loadCallerMatchContext(
   matchId?: string,
 ) {
   const [summariesRes, clubRes, rolesRes] = await Promise.all([
-    context.supabase.rpc("list_match_score_summaries", { _match_id: matchId ?? null }),
+    context.supabase.rpc("list_match_score_summaries", { _match_id: matchId ?? undefined }),
     context.supabase.from("clubs").select("id").eq("owner_id", context.userId).maybeSingle(),
     context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
   ]);

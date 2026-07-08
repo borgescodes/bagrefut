@@ -102,7 +102,7 @@ export const adminListPendingUsers = createServerFn({ method: "GET" })
 
 export const adminSetUserStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         userId: z.string().uuid(),
@@ -130,7 +130,7 @@ export const adminSetUserStatus = createServerFn({ method: "POST" })
  */
 export const adminResetUserPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     await assertApprovedAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

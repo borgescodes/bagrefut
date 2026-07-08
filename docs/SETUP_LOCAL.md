@@ -30,16 +30,38 @@ bun run test
 bun run test:watch
 bun run test:coverage
 bun run typecheck
+bun run format
+bun run format:check
 bun run check
+bun run check:pwa
 bun run build
 bun run lint
 ```
 
 `bun run test` usa Vitest. Evite `bun test`.
 
-`bun run check` executa, nesta ordem: politica de package manager, TypeScript,
-Vitest e build. Lint nao entra no `check` temporariamente porque ha falhas
-globais preexistentes de CRLF/Prettier que serao tratadas em batch separado.
+`bun run format` aplica Prettier. `bun run format:check` valida formatacao.
+
+`bun run check` executa, nesta ordem: politica de package manager, Prettier,
+ESLint, TypeScript, Vitest, validacao PWA e build.
+
+O repo usa LF por padrao via `.gitattributes`. Windows scripts (`.bat`, `.cmd`,
+`.ps1`) permanecem CRLF; assets binarios nao sao normalizados.
+
+## PWA local
+
+Para validar instalacao local:
+
+```bash
+bun run build
+bun run preview
+```
+
+No preview, confira `/manifest.webmanifest`, `/sw.js`, `/favicon.ico`,
+`/apple-touch-icon.png` e os icones PWA. O service worker e registrado apenas em
+producao e pode ser desativado com `?sw=off`. O cache e conservador: somente
+arquivos estaticos versionados do build, sem cache de Supabase, Auth, RPCs ou
+dados privados. Instalacao PWA real em producao exige HTTPS.
 
 Testes SQL em `supabase/tests/database/*.sql` sao manuais no SQL Editor Lovable.
 A ordem correta e aplicar a migration primeiro e executar o teste SQL depois,

@@ -20,7 +20,7 @@ function mustChangePasswordMetadata(
 
 export const changeTemporaryPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => changeTemporaryPasswordInput.parse(data))
+  .validator((data: unknown) => changeTemporaryPasswordInput.parse(data))
   .handler(async ({ data, context }) => {
     const password = validatePassword(data.newPassword);
     if (!password.ok) throw new Error(password.error);

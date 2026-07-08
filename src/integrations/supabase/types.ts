@@ -1091,6 +1091,27 @@ export type Database = {
         Args: { _user_id?: string };
         Returns: boolean;
       };
+      list_match_score_summaries: {
+        Args: { _match_id?: string | null };
+        Returns: {
+          away_club_abbreviation: string;
+          away_club_badge_path: string | null;
+          away_club_id: string;
+          away_club_name: string;
+          away_goals: number;
+          competition_name: string;
+          final_result: string;
+          home_club_abbreviation: string;
+          home_club_badge_path: string | null;
+          home_club_id: string;
+          home_club_name: string;
+          home_goals: number;
+          match_id: string;
+          round_number: number;
+          starts_at: string;
+          status: Database["public"]["Enums"]["match_status"];
+        }[];
+      };
       normalize_club_name: {
         Args: { _name: string };
         Returns: string;
@@ -1137,6 +1158,10 @@ export type Database = {
       training_cost_cents: {
         Args: { _rarity: Database["public"]["Enums"]["player_rarity"] };
         Returns: number;
+      };
+      user_participates_in_match: {
+        Args: { _match_id: string; _user_id: string };
+        Returns: boolean;
       };
       update_club_identity: {
         Args: {

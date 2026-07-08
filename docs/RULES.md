@@ -9,10 +9,10 @@
 
 ## Bandas de raridade e preço de referência (cents)
 
-| Raridade | OVR   | Preço de referência |
-| -------- | ----- | ------------------- |
-| peba     | 40-59 | R$ 0,50 - R$ 5,00   |
-| paia     | 60-74 | R$ 5,01 - R$ 25,00  |
+| Raridade | OVR   | Preço de referência  |
+| -------- | ----- | -------------------- |
+| peba     | 40-59 | R$ 0,50 - R$ 5,00    |
+| paia     | 60-74 | R$ 5,01 - R$ 25,00   |
 | pika     | 75-89 | R$ 25,01 - R$ 100,00 |
 
 - A interpolação é linear dentro da raridade e do OVR.
@@ -70,11 +70,11 @@ Média ponderada por posição. Pesos somam 100:
 
 ## Estilo de jogo
 
-| Estilo     | Ataque | Defesa |
-| ---------- | ------ | ------ |
-| balanced   | 1.00   | 1.00   |
-| offensive  | 1.10   | 0.90   |
-| defensive  | 0.90   | 1.10   |
+| Estilo    | Ataque | Defesa |
+| --------- | ------ | ------ |
+| balanced  | 1.00   | 1.00   |
+| offensive | 1.10   | 0.90   |
+| defensive | 0.90   | 1.10   |
 
 ## Tabela de rodadas (6 clubes)
 
@@ -99,3 +99,15 @@ Média ponderada por posição. Pesos somam 100:
 ## Formações
 
 `1-2-1-1`, `1-1-2-1`, `1-1-1-2`, `0-2-2-1` (fut 5, com GK + 4 de linha).
+
+## Partidas e eventos
+
+- Usuario approved pode ver placar/resumo de partidas da competicao.
+- Eventos completos ficam disponiveis somente para admin approved ou usuario
+  approved cujo clube seja mandante ou visitante da partida.
+- Usuario approved estranho a partida nao ve `match_events`, mesmo depois de
+  `reveal_at`, com data passada ou com partida `finished`.
+- Pending, blocked e anon nao acessam resumo nem eventos.
+- O resumo de partida nao inclui evento, descricao, minuto a minuto, jogador do
+  evento, escalacao privada, tatica, seed ou payload de simulacao.
+- O client nao insere, atualiza nem deleta `match_events`.

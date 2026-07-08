@@ -3,10 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { createClub, listBadges } from "@/lib/game.functions";
-import {
-  validateAbbreviation,
-  validateClubName,
-} from "@/domain/rules/validators";
+import { validateAbbreviation, validateClubName } from "@/domain/rules/validators";
 
 export const Route = createFileRoute("/_authenticated/criar-clube")({
   component: CreateClubPage,
@@ -50,13 +47,19 @@ function CreateClubPage() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <label className="block text-sm">
             <span className="mb-1 block">Nome (3-24)</span>
-            <input value={name} onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2" />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2"
+            />
           </label>
           <label className="block text-sm">
             <span className="mb-1 block">Sigla (2-4 letras)</span>
-            <input value={abbr} onChange={(e) => setAbbr(e.target.value.toUpperCase())}
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 uppercase" />
+            <input
+              value={abbr}
+              onChange={(e) => setAbbr(e.target.value.toUpperCase())}
+              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 uppercase"
+            />
           </label>
           <div>
             <p className="text-sm mb-2">Escudo</p>

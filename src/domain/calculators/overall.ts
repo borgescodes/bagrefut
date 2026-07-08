@@ -24,6 +24,8 @@ export function calculateOverall(position: PlayerPosition, attrs: PlayerAttribut
   return Math.round(total / denom);
 }
 
-export function positionWeights(position: PlayerPosition): Readonly<Partial<Record<PlayerAttributeKey, number>>> {
+export function positionWeights(
+  position: PlayerPosition,
+): Readonly<Partial<Record<PlayerAttributeKey, number>>> {
   return WEIGHTS[position];
 }

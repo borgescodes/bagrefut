@@ -139,6 +139,39 @@ export interface Match {
   simulated_at: string | null;
 }
 
+export type MatchFinalResult = "home_win" | "away_win" | "draw" | "pending";
+
+export interface MatchScoreSummary {
+  match_id: string;
+  status: MatchStatus;
+  round_number: number;
+  competition_name: string;
+  starts_at: string;
+  home_club_id: string;
+  home_club_name: string;
+  home_club_abbreviation: string;
+  home_club_badge_path: string | null;
+  away_club_id: string;
+  away_club_name: string;
+  away_club_abbreviation: string;
+  away_club_badge_path: string | null;
+  home_goals: number;
+  away_goals: number;
+  final_result: MatchFinalResult;
+}
+
+export interface MatchDetails extends MatchScoreSummary {
+  can_view_events: boolean;
+}
+
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue | undefined }
+  | JsonValue[];
+
 export interface MatchEvent {
   id: string;
   match_id: string;
@@ -147,7 +180,7 @@ export interface MatchEvent {
   event_type: MatchEventType;
   club_id: string | null;
   player_id: string | null;
-  meta: Record<string, unknown>;
+  meta: JsonValue;
 }
 
 export interface Lineup {

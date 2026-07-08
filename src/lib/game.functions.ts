@@ -1,8 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { systemBuyPriceCents, systemSellPriceCents } from "@/domain/calculators/prices";
 import { PLAYER_ATTRIBUTE_KEYS } from "@/domain/enums";
+import type { MatchDetails, MatchEvent, MatchFinalResult, MatchScoreSummary } from "@/domain/types";
+import type { Database } from "@/integrations/supabase/types";
+import { canRequestMatchEvents } from "@/lib/match-access";
 
 /**
  * Returns the current user's profile (id, username, status) and roles.
@@ -49,7 +53,7 @@ const createClubInput = z.object({
 
 export const createClub = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => createClubInput.parse(data))
+  .validator((data: unknown) => createClubInput.parse(data))
   .handler(async ({ data, context }) => {
     const { data: clubId, error } = await context.supabase.rpc("create_club", {
       _name: data.name,
@@ -69,7 +73,7 @@ const updateClubIdentityInput = z.object({
 
 export const updateClubIdentity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => updateClubIdentityInput.parse(data))
+  .validator((data: unknown) => updateClubIdentityInput.parse(data))
   .handler(async ({ data, context }) => {
     const { data: club, error } = await context.supabase.rpc("update_club_identity", {
       _club_id: data.clubId,
@@ -83,7 +87,7 @@ export const updateClubIdentity = createServerFn({ method: "POST" })
 
 export const openInitialPack = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ clubId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ clubId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { data: items, error } = await context.supabase.rpc("open_initial_pack", {
       _club_id: data.clubId,
@@ -189,7 +193,7 @@ const clubPlayerInput = z.object({ clubPlayerId: z.string().uuid() });
 
 export const buyPlayerFromSystem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => clubPlayerInput.parse(data))
+  .validator((data: unknown) => clubPlayerInput.parse(data))
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("buy_player_from_system", {
       _club_player_id: data.clubPlayerId,
@@ -200,7 +204,7 @@ export const buyPlayerFromSystem = createServerFn({ method: "POST" })
 
 export const sellPlayerToSystem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => clubPlayerInput.parse(data))
+  .validator((data: unknown) => clubPlayerInput.parse(data))
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("sell_player_to_system", {
       _club_player_id: data.clubPlayerId,
@@ -215,7 +219,7 @@ const trainClubPlayerInput = clubPlayerInput.extend({
 
 export const trainClubPlayer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => trainClubPlayerInput.parse(data))
+  .validator((data: unknown) => trainClubPlayerInput.parse(data))
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("train_club_player", {
       _club_player_id: data.clubPlayerId,
@@ -236,4 +240,98 @@ export const getMyClub = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     return data;
+  });
+
+const matchIdInput = z.object({ matchId: z.string().uuid() });
+
+function asMatchSummary(row: Record<string, unknown>): MatchScoreSummary {
+  return {
+    match_id: String(row.match_id),
+    status: row.status as MatchScoreSummary["status"],
+    round_number: Number(row.round_number),
+    competition_name: String(row.competition_name),
+    starts_at: String(row.starts_at),
+    home_club_id: String(row.home_club_id),
+    home_club_name: String(row.home_club_name),
+    home_club_abbreviation: String(row.home_club_abbreviation),
+    home_club_badge_path: row.home_club_badge_path ? String(row.home_club_badge_path) : null,
+    away_club_id: String(row.away_club_id),
+    away_club_name: String(row.away_club_name),
+    away_club_abbreviation: String(row.away_club_abbreviation),
+    away_club_badge_path: row.away_club_badge_path ? String(row.away_club_badge_path) : null,
+    home_goals: Number(row.home_goals),
+    away_goals: Number(row.away_goals),
+    final_result: String(row.final_result) as MatchFinalResult,
+  };
+}
+
+async function loadCallerMatchContext(
+  context: {
+    supabase: SupabaseClient<Database>;
+    userId: string;
+  },
+  matchId?: string,
+) {
+  const [summariesRes, clubRes, rolesRes] = await Promise.all([
+    context.supabase.rpc("list_match_score_summaries", { _match_id: matchId ?? null }),
+    context.supabase.from("clubs").select("id").eq("owner_id", context.userId).maybeSingle(),
+    context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
+  ]);
+
+  if (summariesRes.error) throw new Error(summariesRes.error.message);
+  if (clubRes.error) throw new Error(clubRes.error.message);
+  if (rolesRes.error) throw new Error(rolesRes.error.message);
+
+  return {
+    summaries: (summariesRes.data ?? []).map((row) =>
+      asMatchSummary(row as Record<string, unknown>),
+    ),
+    myClubId: clubRes.data?.id ?? null,
+    isAdmin: (rolesRes.data ?? []).some((role) => role.role === "admin"),
+  };
+}
+
+export const listMatchSummaries = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { summaries } = await loadCallerMatchContext(context);
+    return { matches: summaries };
+  });
+
+export const getMatchDetails = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => matchIdInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { summaries, myClubId, isAdmin } = await loadCallerMatchContext(context, data.matchId);
+    const summary = summaries[0];
+    if (!summary) throw new Error("match_not_found");
+
+    const details: MatchDetails = {
+      ...summary,
+      can_view_events: canRequestMatchEvents({ summary, myClubId, isAdmin }),
+    };
+    return { match: details };
+  });
+
+export const getMatchEvents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => matchIdInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { summaries, myClubId, isAdmin } = await loadCallerMatchContext(context, data.matchId);
+    const summary = summaries[0];
+    if (!summary) throw new Error("match_not_found");
+
+    if (!canRequestMatchEvents({ summary, myClubId, isAdmin })) {
+      throw new Error("match_events_forbidden");
+    }
+
+    const { data: events, error } = await context.supabase
+      .from("match_events")
+      .select("id, match_id, minute, reveal_at, event_type, club_id, player_id, meta")
+      .eq("match_id", data.matchId)
+      .order("minute", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) throw new Error(error.message);
+    return { events: (events ?? []) as MatchEvent[] };
   });

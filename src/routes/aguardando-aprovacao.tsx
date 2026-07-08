@@ -17,7 +17,9 @@ function WaitingPage() {
           liberada.
         </p>
         <p className="mt-6 text-sm">
-          <Link to="/login" className="underline">Voltar ao login</Link>
+          <Link to="/login" className="underline">
+            Voltar ao login
+          </Link>
         </p>
       </div>
     </main>

@@ -19,14 +19,29 @@ bun install --frozen-lockfile
 bun run test
 bun run test:coverage
 bun run typecheck
+bun run format:check
+bun run lint
+bun run check:pwa
 bun run check
 bun run build
-bun run lint
 ```
 
 `bun run test` usa Vitest; nao use `bun test`. O `check` valida package manager,
-TypeScript, Vitest e build, sem lint por enquanto por causa de ruido global
-preexistente de CRLF/Prettier.
+Prettier, ESLint, TypeScript, Vitest, assets/manifest PWA e build.
+
+O deploy deve preservar `.gitattributes`: LF e padrao do repo; scripts Windows
+ficam CRLF; binarios ficam marcados como binarios.
+
+## PWA em producao
+
+- Lovable deve servir `/manifest.webmanifest`, `/sw.js`, `/favicon.ico`,
+  `/apple-touch-icon.png` e os icones PWA.
+- A instalacao PWA depende de HTTPS em producao.
+- O service worker gerado por `vite-plugin-pwa` faz precache somente de assets
+  estaticos versionados do build. Nao configurar runtime caching para Supabase,
+  Auth, RPCs ou qualquer dado privado.
+- Nao comunicar suporte offline total enquanto nao existir desenho explicito de
+  offline para dados privados.
 
 Testes SQL em `supabase/tests/database/*.sql` sao executados manualmente no SQL
 Editor Lovable: primeiro a migration, depois o teste SQL, mantendo
@@ -64,6 +79,7 @@ Esses e-mails internos não são entregáveis. A recuperação por e-mail não d
 ser usada; o fluxo oficial é WhatsApp + senha temporária gerada pelo admin.
 Após alterar configurações no Lovable Cloud, validar cadastro e login
 manualmente.
+
 # SQL manual para RLS de eventos
 
 - A migration `supabase/migrations/20260708120000_match_events_rls.sql` deve ser

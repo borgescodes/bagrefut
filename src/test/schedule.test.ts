@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateSchedule } from "@/domain/calculators/schedule";
 
-const clubIds = ["A","B","C","D","E","F"];
+const clubIds = ["A", "B", "C", "D", "E", "F"];
 
 describe("generateSchedule", () => {
   const schedule = generateSchedule(clubIds);
@@ -38,7 +38,7 @@ describe("generateSchedule", () => {
   });
 
   it("throws when not exactly 6 clubs", () => {
-    expect(() => generateSchedule(["A","B","C"])).toThrow();
+    expect(() => generateSchedule(["A", "B", "C"])).toThrow();
   });
 
   it("is deterministic for the same input", () => {

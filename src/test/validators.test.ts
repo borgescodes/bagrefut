@@ -5,6 +5,7 @@ import {
   validateAbbreviation,
   validateClubName,
   validatePassword,
+  validatePasswordConfirmation,
   validatePriceCents,
   validateUsername,
 } from "@/domain/rules/validators";
@@ -34,6 +35,26 @@ describe("validatePassword", () => {
     expect(validatePassword("onlyletters").ok).toBe(false);
     expect(validatePassword("12345678").ok).toBe(false);
     expect(validatePassword("a".repeat(33) + "1").ok).toBe(false);
+  });
+});
+
+describe("validatePasswordConfirmation", () => {
+  it("accepts matching passwords", () => {
+    expect(validatePasswordConfirmation("abcd1234", "abcd1234").ok).toBe(true);
+  });
+
+  it("rejects empty confirmation", () => {
+    expect(validatePasswordConfirmation("abcd1234", "")).toEqual({
+      ok: false,
+      error: "password_confirmation_required",
+    });
+  });
+
+  it("rejects different confirmation", () => {
+    expect(validatePasswordConfirmation("abcd1234", "abcd12345")).toEqual({
+      ok: false,
+      error: "password_confirmation_mismatch",
+    });
   });
 });
 

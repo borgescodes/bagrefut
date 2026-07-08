@@ -1,15 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { buildPasswordRecoveryWhatsAppUrl, mapAuthErrorMessage } from "@/domain/rules/auth";
 import { usernameToInternalEmail } from "@/domain/rules/validators";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
   head: () => ({
-    meta: [
-      { title: "Login — BagreFut" },
-      { name: "description", content: "Entre no BagreFut." },
-    ],
+    meta: [{ title: "Login — BagreFut" }, { name: "description", content: "Entre no BagreFut." }],
   }),
 });
 
@@ -18,25 +16,35 @@ function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const passwordChanged = window.sessionStorage.getItem("bagrefut_password_changed") === "1";
+    window.sessionStorage.removeItem("bagrefut_password_changed");
+    return passwordChanged;
+  });
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSuccess(false);
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: usernameToInternalEmail(username),
       password,
     });
     setBusy(false);
-    if (error) return setError(error.message);
-    nav({ to: "/app" });
+    if (error) return setError(mapAuthErrorMessage(error.message));
+    nav({ to: data.user?.app_metadata?.must_change_password === true ? "/trocar-senha" : "/app" });
   }
 
   return (
     <main className="min-h-screen bg-[#0b0f14] px-6 py-12 text-slate-100">
       <div className="mx-auto max-w-md">
         <h1 className="text-2xl font-semibold">Entrar</h1>
+        {success && (
+          <p className="mt-4 text-sm text-emerald-300">Senha alterada. Entre novamente.</p>
+        )}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <label className="block text-sm">
             <span className="mb-1 block">Nome de usuário</span>
@@ -68,9 +76,19 @@ function LoginPage() {
             {busy ? "Entrando..." : "Entrar"}
           </button>
         </form>
-        <p className="mt-4 text-sm">
-          <Link to="/cadastro" className="underline">Não tem conta? Cadastre-se</Link>
-        </p>
+        <div className="mt-4 space-y-2 text-sm">
+          <a
+            href={buildPasswordRecoveryWhatsAppUrl(username)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block underline"
+          >
+            Esqueci minha senha
+          </a>
+          <Link to="/cadastro" className="underline">
+            Não tem conta? Cadastre-se
+          </Link>
+        </div>
       </div>
     </main>
   );

@@ -115,7 +115,7 @@ export const adminSetUserStatus = createServerFn({ method: "POST" })
     const { data: result, error } = await context.supabase.rpc("admin_set_user_status", {
       _target_user_id: data.userId,
       _new_status: data.status,
-      _reason: data.reason ?? null,
+      _reason: data.reason ?? undefined,
     });
     if (error) throw new Error(error.message);
 

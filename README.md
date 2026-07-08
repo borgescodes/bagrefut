@@ -72,6 +72,53 @@ técnicas mínimas para operar o backend.
 - [docs/SETUP_LOCAL.md](docs/SETUP_LOCAL.md)
 - [docs/DEPLOY.md](docs/DEPLOY.md)
 
+## Comandos oficiais
+
+Bun e o gerenciador canonico. `bun.lock` e o unico lockfile versionado; nao
+rode `npm install`, `npm ci`, `pnpm` ou `yarn` neste repo. Os scripts tambem
+aceitam `npm run <script>` quando `node_modules` ja estiver instalado, mas npm
+nao e usado para instalar dependencias.
+
+```bash
+bun install --frozen-lockfile
+bun run dev
+bun run test
+bun run test:watch
+bun run test:coverage
+bun run typecheck
+bun run check
+bun run build
+bun run lint
+```
+
+`bun run test` executa Vitest. Evite `bun test`, porque este repo nao usa o
+runner nativo do Bun para a suite TS.
+
+`bun run check` valida politica de package manager, TypeScript, Vitest e build.
+Lint ainda nao entra no `check` porque ha ruido global preexistente de
+CRLF/Prettier; isso fica para batch proprio.
+
+Testes SQL em `supabase/tests/database/*.sql` nao entram no `bun run test`.
+Eles rodam manualmente no SQL Editor Lovable, sempre aplicando a migration antes
+do teste SQL. Quando o arquivo ja estiver preparado com transacao/rollback,
+preserve essa protecao na execucao manual.
+
+## Partidas e eventos
+
+- `listMatchSummaries`, `getMatchDetails` e `getMatchEvents` mantem contratos
+  separados para placar/resumo, detalhe e minuto a minuto.
+- `list_match_score_summaries` expoe somente colunas de resumo: partida,
+  status, rodada, competicao, data, clubes, escudos, placar e resultado final.
+- Eventos completos em `match_events` sao visiveis somente para admin approved
+  ou usuario approved cujo clube seja mandante/visitante.
+- Usuarios approved estranhos veem apenas placar/resumo. Pending, blocked e anon
+  nao veem resumo nem eventos.
+- `reveal_at`, data passada e partida encerrada nao liberam eventos completos.
+- O client nao escreve diretamente em `match_events`; escrita fica restrita ao
+  backend confiavel/service role ou RPC administrativa existente.
+- A migration `supabase/migrations/20260708120000_match_events_rls.sql` deve ser
+  aplicada manualmente no SQL Editor Lovable.
+
 ## Auth operacional
 
 - O login usa username + senha. O username é convertido para e-mail interno

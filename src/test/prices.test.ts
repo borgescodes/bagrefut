@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  positionPriceMultiplier,
   rarityBand,
   referencePriceCents,
   systemBuyPriceCents,
@@ -31,6 +32,16 @@ describe("rarity bands and reference prices", () => {
     expect(referencePriceCents("paia", 67, "DEF")).toBe(1425);
     expect(referencePriceCents("paia", 67, "MID")).toBe(1501);
     expect(referencePriceCents("paia", 67, "ATA")).toBe(1651);
+  });
+  it("exposes the exact position price multipliers", () => {
+    expect(positionPriceMultiplier("GK")).toBe(0.9);
+    expect(positionPriceMultiplier("DEF")).toBe(0.95);
+    expect(positionPriceMultiplier("MID")).toBe(1);
+    expect(positionPriceMultiplier("ATA")).toBe(1.1);
+  });
+  it("clamps overall below and above the rarity band before pricing", () => {
+    expect(referencePriceCents("paia", 1, "MID")).toBe(501);
+    expect(referencePriceCents("paia", 99, "MID")).toBe(2500);
   });
   it("clamps multiplied prices inside rarity bands and global cap", () => {
     expect(referencePriceCents("peba", 40, "GK")).toBe(50);

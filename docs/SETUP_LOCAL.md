@@ -14,15 +14,36 @@ copie `.env.example` e preencha se necessário. Chaves relevantes:
 ## Rodar
 
 ```bash
-bun install
+bun install --frozen-lockfile
 bun run dev
 ```
 
-## Testes
+Bun e o gerenciador canonico. `bun.lock` e o unico lockfile versionado; nao rode
+`npm install`, `npm ci`, `pnpm` ou `yarn`. Os scripts aceitam `npm run <script>`
+quando `node_modules` ja estiver instalado, mas npm nao e o gerenciador de
+instalacao do projeto.
+
+## Scripts
 
 ```bash
-bunx vitest run
+bun run test
+bun run test:watch
+bun run test:coverage
+bun run typecheck
+bun run check
+bun run build
+bun run lint
 ```
+
+`bun run test` usa Vitest. Evite `bun test`.
+
+`bun run check` executa, nesta ordem: politica de package manager, TypeScript,
+Vitest e build. Lint nao entra no `check` temporariamente porque ha falhas
+globais preexistentes de CRLF/Prettier que serao tratadas em batch separado.
+
+Testes SQL em `supabase/tests/database/*.sql` sao manuais no SQL Editor Lovable.
+A ordem correta e aplicar a migration primeiro e executar o teste SQL depois,
+preservando transacao/rollback quando o teste ja estiver preparado assim.
 
 ## Promover o primeiro admin (executar uma vez, via SQL)
 

@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   centsToReal,
   MAX_PRICE_CENTS,
+  realToCents,
   validateAbbreviation,
   validateClubName,
   validatePassword,
   validatePasswordConfirmation,
   validatePriceCents,
   validateUsername,
+  usernameToInternalEmail,
 } from "@/domain/rules/validators";
 
 describe("validateUsername", () => {
@@ -88,5 +90,15 @@ describe("validatePriceCents / formatting", () => {
     expect(centsToReal(100)).toBe("R$ 1,00");
     expect(centsToReal(2550)).toBe("R$ 25,50");
     expect(centsToReal(10000)).toBe("R$ 100,00");
+  });
+  it("rounds BRL values to cents", () => {
+    expect(realToCents(0)).toBe(0);
+    expect(realToCents(10.235)).toBe(1024);
+  });
+});
+
+describe("usernameToInternalEmail", () => {
+  it("normalizes username casing to the internal auth domain", () => {
+    expect(usernameToInternalEmail("Bagre123")).toBe("bagre123@bagrefut.local");
   });
 });

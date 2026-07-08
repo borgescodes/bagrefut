@@ -14,6 +14,15 @@ describe("createRng", () => {
     const seqB = Array.from({ length: 5 }, () => b());
     expect(seqA).not.toEqual(seqB);
   });
+  it("always returns values in the [0, 1) range", () => {
+    const rng = createRng(20260708);
+    const values = Array.from({ length: 100 }, () => rng());
+
+    for (const value of values) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThan(1);
+    }
+  });
 });
 
 describe("shuffleWithSeed", () => {

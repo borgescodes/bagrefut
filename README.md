@@ -86,7 +86,10 @@ bun run test
 bun run test:watch
 bun run test:coverage
 bun run typecheck
+bun run format
+bun run format:check
 bun run check
+bun run check:pwa
 bun run build
 bun run lint
 ```
@@ -94,9 +97,30 @@ bun run lint
 `bun run test` executa Vitest. Evite `bun test`, porque este repo nao usa o
 runner nativo do Bun para a suite TS.
 
-`bun run check` valida politica de package manager, TypeScript, Vitest e build.
-Lint ainda nao entra no `check` porque ha ruido global preexistente de
-CRLF/Prettier; isso fica para batch proprio.
+`bun run format` aplica Prettier. `bun run format:check` valida Prettier sem
+alterar arquivos.
+
+`bun run check` valida, nesta ordem: politica de package manager, Prettier,
+ESLint, TypeScript, Vitest, assets/manifest PWA e build.
+
+O repo usa LF como fim de linha padrao via `.gitattributes`. Arquivos `.bat`,
+`.cmd` e `.ps1` permanecem CRLF; imagens, favicon, fontes e ZIPs sao binarios.
+
+## PWA
+
+- `lang="pt-BR"`, metadata mobile e manifest ficam no documento principal.
+- `public/manifest.webmanifest` declara `name`, `short_name`, `description`,
+  `lang`, `start_url`, `scope`, `display`, `orientation`, cores e icones.
+- Assets do app: `favicon.ico`, `apple-touch-icon.png`, `pwa-192x192.png`,
+  `pwa-512x512.png`, `pwa-maskable-192x192.png` e `pwa-maskable-512x512.png`.
+- O service worker e gerado no build por `vite-plugin-pwa`, com auto-update e
+  precache apenas de arquivos estaticos versionados em `.output/public`.
+- Nao ha cache dinamico de Supabase, Auth, RPCs ou dados privados, e o app nao
+  promete suporte offline total.
+- Para testar instalacao local, rode `bun run build`, `bun run preview`, abra a
+  URL de preview, confira `/manifest.webmanifest`, `/sw.js` e os icones. Em
+  producao, instalacao PWA exige HTTPS; Lovable deve servir manifest, icones e
+  service worker no mesmo escopo `/`.
 
 Testes SQL em `supabase/tests/database/*.sql` nao entram no `bun run test`.
 Eles rodam manualmente no SQL Editor Lovable, sempre aplicando a migration antes

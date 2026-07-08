@@ -19,9 +19,7 @@ function LandingPage() {
     <main className="min-h-screen bg-[#0b0f14] px-6 py-12 text-slate-100">
       <div className="mx-auto max-w-3xl">
         <h1 className="text-4xl font-bold tracking-tight">BagreFut</h1>
-        <p className="mt-2 text-lg text-slate-300">
-          Monte clube. Gerencie elenco. Domine PGM.
-        </p>
+        <p className="mt-2 text-lg text-slate-300">Monte clube. Gerencie elenco. Domine PGM.</p>
         <p className="mt-6 text-sm text-slate-400">
           Fundação técnica — sem UI final. Use as telas técnicas abaixo para operar o backend.
         </p>

@@ -13,6 +13,10 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { registerServiceWorker } from "../lib/pwa";
 
+const appDescription = "Jogo privado de gerenciamento de futebol.";
+const themeColor = "#0b0f14";
+const previewImage =
+  "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d78104e3-c5c2-4e71-9420-c27d4f180266/id-preview-488cf348--55231010-84ab-401d-bb16-d525e1c2af2f.lovable.app-1783456842408.png";
 
 function NotFoundComponent() {
   return (
@@ -80,26 +84,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "BagreFut" },
-      {
-        name: "description",
-        content:
-          "BagreFut é o jogo de gestão de clube dos amigos: 6 times, 10 rodadas, decisões diárias às 22h.",
-      },
-      { name: "theme-color", content: "#0b0f14" },
+      { name: "application-name", content: "BagreFut" },
+      { name: "description", content: appDescription },
+      { name: "theme-color", content: themeColor },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "BagreFut" },
       { property: "og:title", content: "BagreFut" },
-      { property: "og:description", content: "BagreFut é o jogo de gestão de clube dos amigos: 6 times, 10 rodadas, decisões diárias às 22h." },
+      { property: "og:description", content: appDescription },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: previewImage },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "BagreFut" },
-      { name: "twitter:description", content: "BagreFut é o jogo de gestão de clube dos amigos: 6 times, 10 rodadas, decisões diárias às 22h." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d78104e3-c5c2-4e71-9420-c27d4f180266/id-preview-488cf348--55231010-84ab-401d-bb16-d525e1c2af2f.lovable.app-1783456842408.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d78104e3-c5c2-4e71-9420-c27d4f180266/id-preview-488cf348--55231010-84ab-401d-bb16-d525e1c2af2f.lovable.app-1783456842408.png" },
+      { name: "twitter:description", content: appDescription },
+      { name: "twitter:image", content: previewImage },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", href: "/favicon.ico" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
-
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -109,7 +114,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
@@ -134,4 +139,3 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
-

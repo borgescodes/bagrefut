@@ -15,22 +15,62 @@ export interface ScheduledMatch {
 
 // Labels A..F correspond to positions [0..5] in the input clubIds array.
 const TURNO_ROUNDS: Array<Array<[string, string]>> = [
-  [["A","F"], ["B","E"], ["C","D"]],           // round 1
-  [["F","D"], ["E","C"], ["A","B"]],           // round 2
-  [["B","F"], ["C","A"], ["D","E"]],           // round 3
-  [["F","E"], ["A","D"], ["B","C"]],           // round 4
-  [["C","F"], ["D","B"], ["E","A"]],           // round 5
+  [
+    ["A", "F"],
+    ["B", "E"],
+    ["C", "D"],
+  ], // round 1
+  [
+    ["F", "D"],
+    ["E", "C"],
+    ["A", "B"],
+  ], // round 2
+  [
+    ["B", "F"],
+    ["C", "A"],
+    ["D", "E"],
+  ], // round 3
+  [
+    ["F", "E"],
+    ["A", "D"],
+    ["B", "C"],
+  ], // round 4
+  [
+    ["C", "F"],
+    ["D", "B"],
+    ["E", "A"],
+  ], // round 5
 ];
 
 const RETURNO_ROUNDS: Array<Array<[string, string]>> = [
-  [["F","A"], ["E","B"], ["D","C"]],           // round 6
-  [["D","F"], ["C","E"], ["B","A"]],           // round 7
-  [["F","B"], ["A","C"], ["E","D"]],           // round 8
-  [["E","F"], ["D","A"], ["C","B"]],           // round 9
-  [["F","C"], ["B","D"], ["A","E"]],           // round 10
+  [
+    ["F", "A"],
+    ["E", "B"],
+    ["D", "C"],
+  ], // round 6
+  [
+    ["D", "F"],
+    ["C", "E"],
+    ["B", "A"],
+  ], // round 7
+  [
+    ["F", "B"],
+    ["A", "C"],
+    ["E", "D"],
+  ], // round 8
+  [
+    ["E", "F"],
+    ["D", "A"],
+    ["C", "B"],
+  ], // round 9
+  [
+    ["F", "C"],
+    ["B", "D"],
+    ["A", "E"],
+  ], // round 10
 ];
 
-const LABELS = ["A","B","C","D","E","F"] as const;
+const LABELS = ["A", "B", "C", "D", "E", "F"] as const;
 
 /**
  * @param clubIds exactly 6 ids in a stable order (A..F).

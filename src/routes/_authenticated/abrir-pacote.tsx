@@ -41,7 +41,8 @@ function OpenPackPage() {
         ) : (
           <>
             <p className="mt-4 text-sm text-slate-300">
-              Clube: <b>{club.data.name}</b>. O pacote entrega 10 cartas aleatórias, sem repetir e sem reroll.
+              Clube: <b>{club.data.name}</b>. O pacote entrega 10 cartas aleatórias, sem repetir e
+              sem reroll.
             </p>
             <button
               onClick={open}

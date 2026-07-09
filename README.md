@@ -38,14 +38,15 @@ técnicas mínimas para operar o backend.
   de atributo a cada 3 pontos.
 - **Ledger imutável**: `wallet_transactions` sem policy de INSERT/UPDATE/DELETE
   para usuário.
-- **RLS** em todas as 22 tabelas. Nenhum acesso `anon`. Usuário só lê o próprio
+- **RLS** em todas as 24 tabelas. Nenhum acesso `anon`. Usuário só lê o próprio
   clube, próprias cartas, próprio pacote, próprio ledger e ofertas que o envolvem.
 - **Domínio TypeScript puro** (`src/domain/`): enums, tipos, validadores,
   cálculos de OVR, multiplicador de improviso, modificador de estilo, preços de
   referência, RNG determinística (mulberry32) e gerador de tabela de 10 rodadas.
-- **32 testes unitários** (Vitest) cobrindo validadores, OVR, multiplicadores,
-  preços, RNG determinística e integridade da tabela de rodadas.
-- **21 escudos** reais em `public/badges/badge-01.png … badge-21.png`,
+- **65 testes unitários** (Vitest) em 8 arquivos, cobrindo auth operacional,
+  acesso a eventos de partida, política de package manager, validadores, OVR,
+  multiplicadores, preços, treino, RNG determinística e integridade da tabela de rodadas.
+- **66 escudos** reais em `public/badges/badge-01.png … badge-66.png`,
   referenciados por `club_badges.asset_path` (caminho portável).
 - **60 jogadores** semeados no catálogo global respeitando a distribuição:
   35 peba / 20 paia / 5 pika; 12 GK / 18 DEF / 18 MID / 12 ATA. OVR e preço
@@ -54,15 +55,21 @@ técnicas mínimas para operar o backend.
 - **Server functions** (`src/lib/*.functions.ts`) como wrappers finos: `getMe`,
   `getMyClub`, `getMyRoster`, `listSystemMarketStock`, `listBadges`,
   `createClub`, `openInitialPack`, `buyPlayerFromSystem`, `sellPlayerToSystem`,
-  `trainClubPlayer`, e admin
+  `trainClubPlayer`, temporada (`getSeasonOperationalState`, `getSeasonStandings`,
+  `adminSaveSeasonSetup`, `adminSetSeasonParticipants`, `adminStartSeason`,
+  `adminFinishSeason`) e admin
   (`adminListPendingUsers`, `adminSetUserStatus`, `adminResetUserPassword` —
   service role só no servidor; ação registrada em `admin_audit_logs`).
+- **Motor operacional de temporada**: admin configura a próxima temporada,
+  seleciona exatamente 6 clubes elegíveis, `season_start` gera 10 rodadas e
+  30 partidas de forma transacional, o backend expõe rodada atual e
+  classificação, e `season_finish` grava campeão, classificação final e
+  premiação `season_prize` no ledger uma única vez.
 - **Rotas técnicas**: `/`, `/login`, `/cadastro`, `/aguardando-aprovacao`,
   `/_authenticated/app`, `/_authenticated/criar-clube`, `/_authenticated/abrir-pacote`,
   `/_authenticated/admin`.
-- **PWA scaffolding**: `public/manifest.webmanifest`, service worker mínimo
-  em `public/sw.js` (registra listeners de Push API — envio real de push
-  fica pendente), registro guardado contra dev/preview.
+- **PWA scaffolding**: `public/manifest.webmanifest`, ícones PWA e service
+  worker gerado no build por `vite-plugin-pwa`; envio real de push fica pendente.
 
 ## Documentação
 
@@ -123,9 +130,22 @@ O repo usa LF como fim de linha padrao via `.gitattributes`. Arquivos `.bat`,
   service worker no mesmo escopo `/`.
 
 Testes SQL em `supabase/tests/database/*.sql` nao entram no `bun run test`.
-Eles rodam manualmente no SQL Editor Lovable, sempre aplicando a migration antes
-do teste SQL. Quando o arquivo ja estiver preparado com transacao/rollback,
-preserve essa protecao na execucao manual.
+Existem 7 testes SQL transacionais:
+
+- `admin_audit_and_game_rls.sql`
+- `club_identity_security.sql`
+- `match_events_rls.sql`
+- `open_initial_pack_concurrency.sql`
+- `player_market_training.sql`
+- `save_lineup_security.sql`
+- `season_engine.sql`
+
+Eles cobrem RLS, acesso admin, usuário comum/pending/blocked, isolamento por
+clube/owner, saldo e ledger, compra/venda, treino diário, escalação e leitura
+protegida de eventos/resultados. Rodam manualmente no SQL Editor Lovable, sempre
+aplicando a migration correspondente antes do teste SQL. Preserve `BEGIN` /
+`ROLLBACK` na execucao manual. Nao trate esses testes como parte do Vitest nem
+afirme que passaram sem execucao no banco.
 
 ## Partidas e eventos
 
@@ -162,14 +182,12 @@ preserve essa protecao na execucao manual.
 - Simulação minuto-a-minuto real (motor, geração de `match_events`, tempo-real).
 - Mercado P2P (`market_listings`) e ofertas/preço entre clubes.
 - RPCs de troca (`transfer_offer_create`, `transfer_offer_accept`, `transfer_offer_reject`).
-- Motor de temporada: `season_start` (gera 10 rodadas + 30 partidas),
-  `round_process` (fecha escalações às 21:55, roda simulação, credita prêmios).
+- Simulação de partidas e `round_process` automático (fecha escalações, gera
+  placares/eventos e revela resultados).
 - Job `pg_cron` para lock automático de escalação, simulação e revelação de eventos.
 - Envio real de push (VAPID keys + backend sender).
 - Frontend final com identidade visual, cards de jogador, animação de pacote,
   drag-and-drop de escalação, dashboard, telas de mercado/tabela/histórico.
-- Testes de banco em `supabase/tests/database` (pgTAP): sugerido para próxima
-  etapa — a fundação já está pronta para receber. Toda regra crítica está no
-  Postgres (RLS + RPCs SECURITY DEFINER), então os testes SQL cobrirão o
-  contrato real.
+- Automacao local dos testes SQL. Hoje eles existem em `supabase/tests/database`
+  e sao executados manualmente no SQL Editor Lovable, com rollback.
 - Promoção manual do primeiro admin via SQL — ver `docs/SETUP_LOCAL.md`.

@@ -2,14 +2,19 @@
 
 ## Variáveis de ambiente
 
-Este projeto usa Lovable Cloud — as variáveis já estão configuradas no `.env`
-gerado (nunca commitado com valores reais). Para desenvolvimento local,
-copie `.env.example` e preencha se necessário. Chaves relevantes:
+Este projeto usa Lovable Cloud. O arquivo `.env` fica versionado porque o
+Lovable precisa dele neste repositório. Ele deve conter apenas chaves públicas
+ou valores seguros para esse fluxo. Segredos administrativos continuam fora do
+client e não devem ser expostos em variáveis `VITE_*`.
+
+Chaves relevantes:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `VITE_SUPABASE_PROJECT_ID`
-- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only)
+- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` somente no servidor/ambiente seguro, nunca no
+  client nem em `VITE_*`
 
 ## Rodar
 
@@ -66,6 +71,15 @@ dados privados. Instalacao PWA real em producao exige HTTPS.
 Testes SQL em `supabase/tests/database/*.sql` sao manuais no SQL Editor Lovable.
 A ordem correta e aplicar a migration primeiro e executar o teste SQL depois,
 preservando transacao/rollback quando o teste ja estiver preparado assim.
+
+Arquivos SQL existentes:
+
+- `admin_audit_and_game_rls.sql`
+- `club_identity_security.sql`
+- `match_events_rls.sql`
+- `open_initial_pack_concurrency.sql`
+- `player_market_training.sql`
+- `save_lineup_security.sql`
 
 ## Promover o primeiro admin (executar uma vez, via SQL)
 

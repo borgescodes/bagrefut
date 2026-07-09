@@ -2,7 +2,7 @@
 
 ## Stack
 
-- **TanStack Start v1** (SSR, file-based routing) + **React 19** + **Vite 7**.
+- **TanStack Start v1** (SSR, file-based routing) + **React 19** + **Vite 8**.
 - **Tailwind v4** via `src/styles.css`.
 - **Lovable Cloud** (Supabase) — Postgres + Auth + Realtime + Edge Functions.
 - **Vitest** para testes de domínio (unitários, puros).
@@ -21,11 +21,12 @@ src/
 ├── routes/          ← Telas técnicas mínimas
 └── test/            ← Vitest
 supabase/
-└── migrations/      ← Fonte da verdade do schema
+├── migrations/      ← Fonte da verdade do schema
+└── tests/database/  ← Testes SQL transacionais para SQL Editor Lovable
 public/
-├── badges/          ← 21 escudos PNG portáveis
+├── badges/          ← 66 escudos PNG portáveis
 ├── manifest.webmanifest
-└── sw.js            ← Service worker mínimo (Push scaffolding)
+└── ícones PWA       ← Service worker gerado no build por vite-plugin-pwa
 ```
 
 ## Regra de ouro
@@ -72,7 +73,7 @@ propagar para o repositório.
 Migrations já aplicadas:
 
 1. Enums, `user_roles` + `has_role`, `profiles` + trigger, `leagues`
-   (seed Bagreleirão), `club_badges` (seed 21 escudos).
+   (seed Bagreleirão), `club_badges`.
 2. Ajuste de permissões da função `handle_new_user`.
 3. `clubs` (com `balance_cents`), `players`, `club_players`, `initial_packs`,
    `initial_pack_items`, `wallet_transactions`, `_credit_wallet`,
@@ -89,10 +90,40 @@ Migrations já aplicadas:
 7. `match_events` participante/admin-approved, helper
    `user_participates_in_match`, resumo seguro `list_match_score_summaries` e
    revogacao de SELECT direto em `matches` para clients.
+8. Correcoes incrementais posteriores para concorrencia do pacote inicial,
+   grants minimos de funcoes e catalogo canonico de 66 escudos.
+9. Motor operacional de temporada: `season_configurations`,
+   `season_config_participants`, `season_prize_config`, `season_participants`,
+   `season_final_standings`, `matches.scheduled_at`, RPCs `season_start`,
+   `season_finish`, leituras de estado/rodada/classificacao/historico e
+   premios finais no ledger.
 
-A migration `supabase/migrations/20260708120000_match_events_rls.sql` deve ser
-aplicada manualmente no SQL Editor Lovable. Nao usar Supabase CLI para esse
-passo.
+As migrations ficam em ordem cronologica pelo prefixo `YYYYMMDDHHMMSS`. Quando
+uma correcao depende de estado ja aplicado, crie uma nova migration incremental
+em vez de editar migrations antigas.
+
+Testes SQL ficam em `supabase/tests/database/*.sql`. Eles nao rodam no Vitest:
+execute manualmente no SQL Editor Lovable depois de aplicar as migrations
+necessarias, preservando `BEGIN` / `ROLLBACK`.
+
+## Temporadas
+
+- O estado pre-temporada nao cria linhas parciais em `rounds` ou `matches`.
+  `get_season_operational_state` retorna `waiting_for_clubs` quando ha menos de
+  6 clubes elegiveis e `ready_to_start` quando ha pelo menos 6.
+- Clube elegivel = clube ativo da liga Bagreleirao com owner em
+  `profiles.status='approved'`. Admin enxerga motivos de inelegibilidade;
+  usuario comum recebe somente dados publicos.
+- `season_start(config_id)` e transacional e idempotente: se a configuracao ja
+  iniciou, retorna a temporada existente; se a selecao/configuracao for invalida,
+  nao cria temporada, rodada ou partida parcial.
+- O gerador usa fixture round-robin deterministica para 6 clubes: 5 rodadas de
+  turno e 5 de returno com mandos invertidos.
+- `get_season_standings` calcula a classificacao no banco usando somente
+  partidas `finished` e retorna todos os 6 clubes.
+- `season_finish` exige 30 partidas concluidas, grava classificacao final,
+  campeao calculado pelo backend e premia uma vez por clube via
+  `wallet_transactions.kind='season_prize'`.
 
 ## Auth
 
@@ -137,8 +168,17 @@ passo.
 ## Tooling
 
 - Bun e o gerenciador canonico; `bun.lock` e o unico lockfile versionado.
+- `package.json` declara `packageManager: bun@1.3.14`.
 - `.gitattributes` define LF por padrao, CRLF apenas para scripts Windows e
   binario para imagens, favicon, fontes e ZIPs.
 - Prettier usa `.prettierrc.json` com `endOfLine: "lf"`.
 - `bun run check` executa package manager, Prettier, ESLint, TypeScript, Vitest,
   validacao PWA e build.
+
+## Estado validado do repo
+
+- 29 tabelas `public.*` declaradas nas migrations.
+- 29 tabelas com `ENABLE ROW LEVEL SECURITY`.
+- 66 escudos PNG e 66 entradas em `public/badges/manifest.json`.
+- 65 testes Vitest em `src/test`.
+- 7 testes SQL transacionais em `supabase/tests/database`.

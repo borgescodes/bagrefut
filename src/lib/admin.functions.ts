@@ -71,7 +71,10 @@ export function buildPasswordResetAuditPayload() {
   };
 }
 
-async function assertApprovedAdmin(ctx: { supabase: SupabaseClient<Database>; userId: string }) {
+export async function assertApprovedAdmin(ctx: {
+  supabase: SupabaseClient<Database>;
+  userId: string;
+}) {
   const [approvedRes, roleRes] = await Promise.all([
     ctx.supabase.rpc("is_approved_user", { _user_id: ctx.userId }),
     ctx.supabase.rpc("has_role", {

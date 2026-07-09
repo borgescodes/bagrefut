@@ -21,6 +21,8 @@ import { Route as AuthenticatedClassificacaoRouteImport } from './routes/_authen
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAbrirPacoteRouteImport } from './routes/_authenticated/abrir-pacote'
+import { Route as ApiInternalJobsRetryRouteImport } from './routes/api/internal/jobs/retry'
+import { Route as ApiInternalJobsProcessDueRoundsRouteImport } from './routes/api/internal/jobs/process-due-rounds'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -84,6 +86,17 @@ const AuthenticatedAbrirPacoteRoute =
     path: '/abrir-pacote',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiInternalJobsRetryRoute = ApiInternalJobsRetryRouteImport.update({
+  id: '/api/internal/jobs/retry',
+  path: '/api/internal/jobs/retry',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInternalJobsProcessDueRoundsRoute =
+  ApiInternalJobsProcessDueRoundsRouteImport.update({
+    id: '/api/internal/jobs/process-due-rounds',
+    path: '/api/internal/jobs/process-due-rounds',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -97,6 +110,8 @@ export interface FileRoutesByFullPath {
   '/criar-clube': typeof AuthenticatedCriarClubeRoute
   '/elenco': typeof AuthenticatedElencoRoute
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
+  '/api/internal/jobs/process-due-rounds': typeof ApiInternalJobsProcessDueRoundsRoute
+  '/api/internal/jobs/retry': typeof ApiInternalJobsRetryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +125,8 @@ export interface FileRoutesByTo {
   '/criar-clube': typeof AuthenticatedCriarClubeRoute
   '/elenco': typeof AuthenticatedElencoRoute
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
+  '/api/internal/jobs/process-due-rounds': typeof ApiInternalJobsProcessDueRoundsRoute
+  '/api/internal/jobs/retry': typeof ApiInternalJobsRetryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +142,8 @@ export interface FileRoutesById {
   '/_authenticated/criar-clube': typeof AuthenticatedCriarClubeRoute
   '/_authenticated/elenco': typeof AuthenticatedElencoRoute
   '/_authenticated/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
+  '/api/internal/jobs/process-due-rounds': typeof ApiInternalJobsProcessDueRoundsRoute
+  '/api/internal/jobs/retry': typeof ApiInternalJobsRetryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -140,6 +159,8 @@ export interface FileRouteTypes {
     | '/criar-clube'
     | '/elenco'
     | '/trocar-senha'
+    | '/api/internal/jobs/process-due-rounds'
+    | '/api/internal/jobs/retry'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -153,6 +174,8 @@ export interface FileRouteTypes {
     | '/criar-clube'
     | '/elenco'
     | '/trocar-senha'
+    | '/api/internal/jobs/process-due-rounds'
+    | '/api/internal/jobs/retry'
   id:
     | '__root__'
     | '/'
@@ -167,6 +190,8 @@ export interface FileRouteTypes {
     | '/_authenticated/criar-clube'
     | '/_authenticated/elenco'
     | '/_authenticated/trocar-senha'
+    | '/api/internal/jobs/process-due-rounds'
+    | '/api/internal/jobs/retry'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -175,6 +200,8 @@ export interface RootRouteChildren {
   AguardandoAprovacaoRoute: typeof AguardandoAprovacaoRoute
   CadastroRoute: typeof CadastroRoute
   LoginRoute: typeof LoginRoute
+  ApiInternalJobsProcessDueRoundsRoute: typeof ApiInternalJobsProcessDueRoundsRoute
+  ApiInternalJobsRetryRoute: typeof ApiInternalJobsRetryRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -263,6 +290,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAbrirPacoteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/internal/jobs/retry': {
+      id: '/api/internal/jobs/retry'
+      path: '/api/internal/jobs/retry'
+      fullPath: '/api/internal/jobs/retry'
+      preLoaderRoute: typeof ApiInternalJobsRetryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/jobs/process-due-rounds': {
+      id: '/api/internal/jobs/process-due-rounds'
+      path: '/api/internal/jobs/process-due-rounds'
+      fullPath: '/api/internal/jobs/process-due-rounds'
+      preLoaderRoute: typeof ApiInternalJobsProcessDueRoundsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -295,6 +336,8 @@ const rootRouteChildren: RootRouteChildren = {
   AguardandoAprovacaoRoute: AguardandoAprovacaoRoute,
   CadastroRoute: CadastroRoute,
   LoginRoute: LoginRoute,
+  ApiInternalJobsProcessDueRoundsRoute: ApiInternalJobsProcessDueRoundsRoute,
+  ApiInternalJobsRetryRoute: ApiInternalJobsRetryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

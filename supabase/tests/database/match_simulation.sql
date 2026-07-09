@@ -127,7 +127,7 @@ BEGIN
       _users[_i],
       'Match Sim Club ' || _i::text,
       public.normalize_club_name('Match Sim Club ' || _i::text),
-      'M' || pg_catalog.lpad(_i::text, 2, '0'),
+      'MS' || pg_catalog.chr(64 + _i),
       _badge_id,
       0,
       true
@@ -233,9 +233,18 @@ BEGIN
   );
 
   PERFORM pg_catalog.set_config('request.jwt.claim.sub', _users[1]::text, true);
-  UPDATE public.rounds SET lineup_lock_at = pg_catalog.now() + interval '1 hour' WHERE id = _round_id;
-  PERFORM public.save_lineup(_round_id, '1-2-1-1'::public.formation, 'offensive'::public.play_style, _payload);
-  UPDATE public.rounds SET lineup_lock_at = pg_catalog.now() - interval '1 minute' WHERE id = _round_id;
+  UPDATE public.rounds
+  SET lineup_lock_at = pg_catalog.now() + interval '1 hour'
+  WHERE id = _round_id;
+
+  PERFORM public.save_lineup(
+    _round_id,
+    '1-2-1-1'::public.formation,
+    'offensive'::public.play_style,
+    _payload
+  );
+
+  -- Keep lineup lock after lineup updated_at so simulator accepts manual lineup.
 
   PERFORM pg_catalog.set_config('request.jwt.claim.sub', _admin_user::text, true);
   SELECT public.simulate_match(_match_id) INTO _first;
@@ -318,7 +327,7 @@ BEGIN
 
   INSERT INTO public.matches(id, round_id, home_club_id, away_club_id, status, scheduled_at)
   VALUES (_blocked_match_id, _round_id, _clubs[1], _clubs[2], 'scheduled'::public.match_status, pg_catalog.now());
-  DELETE FROM public.club_players WHERE club_id = _clubs[2];
+  UPDATE public.club_players SET is_reserved = true WHERE club_id = _clubs[2];
   BEGIN
     PERFORM public.simulate_match(_blocked_match_id);
     RAISE EXCEPTION 'assertion_failed: insufficient roster simulation succeeded';

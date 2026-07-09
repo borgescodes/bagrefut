@@ -175,7 +175,10 @@ IMMUTABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  SELECT *
+  SELECT
+    slots.slot_order,
+    slots.slot_position,
+    slots.slot_index
   FROM (
     VALUES
       ('1-2-1-1'::public.formation, 1, 'GK'::public.player_position, 1::smallint),

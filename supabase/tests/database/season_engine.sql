@@ -122,7 +122,7 @@ BEGIN
       _users[_i],
       'Season Club ' || _i::text,
       public.normalize_club_name('Season Club ' || _i::text),
-      'S' || pg_catalog.lpad(_i::text, 2, '0'),
+      'SE' || pg_catalog.chr(64 + _i),
       _badge_id,
       0,
       true

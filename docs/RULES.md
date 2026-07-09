@@ -129,3 +129,41 @@ Média ponderada por posição. Pesos somam 100:
 - O resumo de partida nao inclui evento, descricao, minuto a minuto, jogador do
   evento, escalacao privada, tatica, seed ou payload de simulacao.
 - O client nao insere, atualiza nem deleta `match_events`.
+
+## Simulador deterministico de partidas
+
+- Versao atual: `SIMULATION_VERSION = 1`.
+- Seed persistida por partida: `season_id:round_id:match_id:simulation_version`.
+- O motor TypeScript puro usa PRNG deterministico derivado da seed; a RPC SQL usa
+  `md5(seed:contador)` para gerar rolagens deterministicas sem `random()`.
+- Escalacao manual valida e salva antes de `rounds.lineup_lock_at` tem prioridade.
+  Quando ausente ou invalida, a simulacao gera escalacao automatica.
+- Escalacao automatica usa somente cartas elegiveis do clube, sem repeticao, na
+  ordem: posicao natural do slot, menor penalidade de improviso, maior OVR
+  efetivo, maior OVR base, identificador estavel.
+- Fallback automatico usa `1-2-1-1` e `balanced`.
+- Snapshot historico fica em `match_lineup_snapshots` com origem
+  `manual`/`automatic`, formacao, estilo, posicao natural, posicao usada, OVR
+  base, OVR efetivo, penalidade e atributos.
+- Forcas sao limitadas a `0..100`: ataque, defesa, goleiro e geral.
+- Modificadores de formacao:
+  - `1-2-1-1`: ataque `0.98`, defesa `1.08`, chances `0.96`, exposicao `0.88`.
+  - `1-1-2-1`: ataque `1.02`, defesa `0.99`, chances `1.08`, exposicao `1.00`.
+  - `1-1-1-2`: ataque `1.10`, defesa `0.92`, chances `1.06`, exposicao `1.12`.
+  - `0-2-2-1`: ataque `1.05`, defesa `0.94`, chances `1.10`, exposicao `1.20`.
+- Estilos reutilizam o contrato atual: `balanced` neutro, `offensive` ataque
+  `1.10` e defesa `0.90`, `defensive` ataque `0.90` e defesa `1.10`.
+- Eventos gravados: `match_started`, `chance`, `shot`, `save`, `goal`,
+  `halftime`, `match_finished`. Placar final vem dos eventos de gol.
+- Estatisticas por clube ficam em `match_statistics`: posse, chances,
+  finalizacoes, finalizacoes no alvo, defesas e gols.
+- Premios de partida usam `match_reward_config`: vitoria `75`, empate `25`,
+  derrota `0` cents por padrao. Credito passa por `_credit_wallet`; premios
+  zero tambem geram ledger.
+- `simulate_match` e `simulate_round` sao RPCs admin-only, idempotentes, sem
+  cron e sem processamento automatico por horario.
+- Teste estatistico TypeScript roda 2.000 seeds fixas por cenario. Faixas:
+  times iguais com diferenca de vitorias menor que `8%`, time superior vence
+  entre `50%` e `90%`, empates acima de `8%`, media de gols entre `1.8` e `4.8`,
+  placares com 8+ gols abaixo de `4%`. As faixas cobrem variancia fixa sem
+  permitir vitoria garantida.

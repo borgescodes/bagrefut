@@ -436,6 +436,7 @@ export type Database = {
         Row: {
           club_id: string | null
           created_at: string
+          event_index: number | null
           event_type: Database["public"]["Enums"]["match_event_type"]
           id: string
           match_id: string
@@ -447,6 +448,7 @@ export type Database = {
         Insert: {
           club_id?: string | null
           created_at?: string
+          event_index?: number | null
           event_type: Database["public"]["Enums"]["match_event_type"]
           id?: string
           match_id: string
@@ -458,6 +460,7 @@ export type Database = {
         Update: {
           club_id?: string | null
           created_at?: string
+          event_index?: number | null
           event_type?: Database["public"]["Enums"]["match_event_type"]
           id?: string
           match_id?: string
@@ -490,6 +493,188 @@ export type Database = {
           },
         ]
       }
+      match_lineup_snapshots: {
+        Row: {
+          attributes: Json
+          base_overall: number
+          club_id: string
+          club_player_id: string
+          created_at: string
+          effective_overall: number
+          formation: Database["public"]["Enums"]["formation"]
+          id: string
+          improvisation_penalty: number
+          lineup_origin: string
+          match_id: string
+          natural_position: Database["public"]["Enums"]["player_position"]
+          play_style: Database["public"]["Enums"]["play_style"]
+          player_id: string
+          slot_index: number
+          used_position: Database["public"]["Enums"]["player_position"]
+        }
+        Insert: {
+          attributes: Json
+          base_overall: number
+          club_id: string
+          club_player_id: string
+          created_at?: string
+          effective_overall: number
+          formation: Database["public"]["Enums"]["formation"]
+          id?: string
+          improvisation_penalty: number
+          lineup_origin: string
+          match_id: string
+          natural_position: Database["public"]["Enums"]["player_position"]
+          play_style: Database["public"]["Enums"]["play_style"]
+          player_id: string
+          slot_index: number
+          used_position: Database["public"]["Enums"]["player_position"]
+        }
+        Update: {
+          attributes?: Json
+          base_overall?: number
+          club_id?: string
+          club_player_id?: string
+          created_at?: string
+          effective_overall?: number
+          formation?: Database["public"]["Enums"]["formation"]
+          id?: string
+          improvisation_penalty?: number
+          lineup_origin?: string
+          match_id?: string
+          natural_position?: Database["public"]["Enums"]["player_position"]
+          play_style?: Database["public"]["Enums"]["play_style"]
+          player_id?: string
+          slot_index?: number
+          used_position?: Database["public"]["Enums"]["player_position"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_lineup_snapshots_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_lineup_snapshots_club_player_id_fkey"
+            columns: ["club_player_id"]
+            isOneToOne: false
+            referencedRelation: "club_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_lineup_snapshots_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_lineup_snapshots_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_reward_config: {
+        Row: {
+          draw_cents: number
+          id: boolean
+          loss_cents: number
+          updated_at: string
+          win_cents: number
+        }
+        Insert: {
+          draw_cents?: number
+          id?: boolean
+          loss_cents?: number
+          updated_at?: string
+          win_cents?: number
+        }
+        Update: {
+          draw_cents?: number
+          id?: boolean
+          loss_cents?: number
+          updated_at?: string
+          win_cents?: number
+        }
+        Relationships: []
+      }
+      match_statistics: {
+        Row: {
+          attack_strength: number
+          chances: number
+          club_id: string
+          created_at: string
+          defense_strength: number
+          formation: Database["public"]["Enums"]["formation"]
+          goalkeeper_strength: number
+          goals: number
+          lineup_origin: string
+          match_id: string
+          overall_strength: number
+          play_style: Database["public"]["Enums"]["play_style"]
+          possession: number
+          saves: number
+          shots: number
+          shots_on_target: number
+        }
+        Insert: {
+          attack_strength: number
+          chances?: number
+          club_id: string
+          created_at?: string
+          defense_strength: number
+          formation: Database["public"]["Enums"]["formation"]
+          goalkeeper_strength: number
+          goals?: number
+          lineup_origin: string
+          match_id: string
+          overall_strength: number
+          play_style: Database["public"]["Enums"]["play_style"]
+          possession?: number
+          saves?: number
+          shots?: number
+          shots_on_target?: number
+        }
+        Update: {
+          attack_strength?: number
+          chances?: number
+          club_id?: string
+          created_at?: string
+          defense_strength?: number
+          formation?: Database["public"]["Enums"]["formation"]
+          goalkeeper_strength?: number
+          goals?: number
+          lineup_origin?: string
+          match_id?: string
+          overall_strength?: number
+          play_style?: Database["public"]["Enums"]["play_style"]
+          possession?: number
+          saves?: number
+          shots?: number
+          shots_on_target?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_statistics_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_statistics_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matches: {
         Row: {
           away_club_id: string
@@ -499,8 +684,11 @@ export type Database = {
           home_goals: number
           id: string
           round_id: string
+          scheduled_at: string | null
           seed: number | null
           simulated_at: string | null
+          simulation_seed: string | null
+          simulation_version: number | null
           status: Database["public"]["Enums"]["match_status"]
           updated_at: string
         }
@@ -512,8 +700,11 @@ export type Database = {
           home_goals?: number
           id?: string
           round_id: string
+          scheduled_at?: string | null
           seed?: number | null
           simulated_at?: string | null
+          simulation_seed?: string | null
+          simulation_version?: number | null
           status?: Database["public"]["Enums"]["match_status"]
           updated_at?: string
         }
@@ -525,8 +716,11 @@ export type Database = {
           home_goals?: number
           id?: string
           round_id?: string
+          scheduled_at?: string | null
           seed?: number | null
           simulated_at?: string | null
+          simulation_seed?: string | null
+          simulation_version?: number | null
           status?: Database["public"]["Enums"]["match_status"]
           updated_at?: string
         }
@@ -706,12 +900,248 @@ export type Database = {
           },
         ]
       }
+      season_config_participants: {
+        Row: {
+          club_id: string
+          config_id: string
+          created_at: string
+          sort_order: number
+        }
+        Insert: {
+          club_id: string
+          config_id: string
+          created_at?: string
+          sort_order: number
+        }
+        Update: {
+          club_id?: string
+          config_id?: string
+          created_at?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_config_participants_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_config_participants_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "season_configurations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_configurations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          default_match_time: string
+          id: string
+          league_id: string
+          name: string
+          registration_deadline: string | null
+          registration_status: string
+          round_interval_days: number
+          season_id: string | null
+          start_date: string
+          status: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          default_match_time: string
+          id?: string
+          league_id: string
+          name: string
+          registration_deadline?: string | null
+          registration_status?: string
+          round_interval_days?: number
+          season_id?: string | null
+          start_date: string
+          status?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          default_match_time?: string
+          id?: string
+          league_id?: string
+          name?: string
+          registration_deadline?: string | null
+          registration_status?: string
+          round_interval_days?: number
+          season_id?: string | null
+          start_date?: string
+          status?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_configurations_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_configurations_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: true
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_final_standings: {
+        Row: {
+          club_id: string
+          created_at: string
+          draws: number
+          goal_difference: number
+          goals_against: number
+          goals_for: number
+          losses: number
+          played: number
+          points: number
+          position: number
+          prize_cents: number
+          season_id: string
+          wins: number
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          draws: number
+          goal_difference: number
+          goals_against: number
+          goals_for: number
+          losses: number
+          played: number
+          points: number
+          position: number
+          prize_cents?: number
+          season_id: string
+          wins: number
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          draws?: number
+          goal_difference?: number
+          goals_against?: number
+          goals_for?: number
+          losses?: number
+          played?: number
+          points?: number
+          position?: number
+          prize_cents?: number
+          season_id?: string
+          wins?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_final_standings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_final_standings_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_participants: {
+        Row: {
+          club_id: string
+          created_at: string
+          season_id: string
+          sort_order: number
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          season_id: string
+          sort_order: number
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          season_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_participants_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_participants_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_prize_config: {
+        Row: {
+          amount_cents: number
+          config_id: string
+          created_at: string
+          position: number
+        }
+        Insert: {
+          amount_cents: number
+          config_id: string
+          created_at?: string
+          position: number
+        }
+        Update: {
+          amount_cents?: number
+          config_id?: string
+          created_at?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_prize_config_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "season_configurations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seasons: {
         Row: {
+          champion_club_id: string | null
+          champion_goal_difference: number | null
+          champion_points: number | null
+          champion_wins: number | null
+          config_id: string | null
           created_at: string
           finished_at: string | null
           id: string
           league_id: string
+          name: string | null
           season_number: number
           seed: number
           started_at: string | null
@@ -719,10 +1149,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          champion_club_id?: string | null
+          champion_goal_difference?: number | null
+          champion_points?: number | null
+          champion_wins?: number | null
+          config_id?: string | null
           created_at?: string
           finished_at?: string | null
           id?: string
           league_id: string
+          name?: string | null
           season_number: number
           seed?: number
           started_at?: string | null
@@ -730,10 +1166,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          champion_club_id?: string | null
+          champion_goal_difference?: number | null
+          champion_points?: number | null
+          champion_wins?: number | null
+          config_id?: string | null
           created_at?: string
           finished_at?: string | null
           id?: string
           league_id?: string
+          name?: string | null
           season_number?: number
           seed?: number
           started_at?: string | null
@@ -741,6 +1183,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "seasons_champion_club_id_fkey"
+            columns: ["champion_club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seasons_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "season_configurations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "seasons_league_id_fkey"
             columns: ["league_id"]
@@ -1015,6 +1471,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _assert_approved_admin: { Args: never; Returns: string }
+      _bagreleirao_league_id: { Args: never; Returns: string }
       _credit_wallet: {
         Args: {
           _amount_cents: number
@@ -1037,6 +1495,97 @@ export type Database = {
         }
         Returns: number
       }
+      _match_clamp: {
+        Args: { _max: number; _min: number; _value: number }
+        Returns: number
+      }
+      _match_credit_reward: {
+        Args: {
+          _club_id: string
+          _goals_against: number
+          _goals_for: number
+          _match_id: string
+        }
+        Returns: undefined
+      }
+      _match_formation_modifier: {
+        Args: {
+          _formation: Database["public"]["Enums"]["formation"]
+          _key: string
+        }
+        Returns: number
+      }
+      _match_formation_slots: {
+        Args: { _formation: Database["public"]["Enums"]["formation"] }
+        Returns: {
+          slot_index: number
+          slot_order: number
+          slot_position: Database["public"]["Enums"]["player_position"]
+        }[]
+      }
+      _match_improvisation_multiplier: {
+        Args: {
+          _natural: Database["public"]["Enums"]["player_position"]
+          _used: Database["public"]["Enums"]["player_position"]
+        }
+        Returns: number
+      }
+      _match_insert_event: {
+        Args: {
+          _away_goals: number
+          _club_id: string
+          _event_index: number
+          _event_type: Database["public"]["Enums"]["match_event_type"]
+          _home_goals: number
+          _match_id: string
+          _meta: Json
+          _minute: number
+          _player_id: string
+        }
+        Returns: undefined
+      }
+      _match_result_json: { Args: { _match_id: string }; Returns: Json }
+      _match_sim_random: {
+        Args: { _counter: number; _seed: string }
+        Returns: number
+      }
+      _match_strength: {
+        Args: { _club_id: string; _match_id: string }
+        Returns: {
+          attack_strength: number
+          defense_strength: number
+          goalkeeper_strength: number
+          overall_strength: number
+        }[]
+      }
+      _match_style_modifier: {
+        Args: {
+          _key: string
+          _style: Database["public"]["Enums"]["play_style"]
+        }
+        Returns: number
+      }
+      _season_club_eligibility: {
+        Args: { _league_id: string }
+        Returns: {
+          abbreviation: string
+          club_id: string
+          club_name: string
+          ineligible_reason: string
+          is_eligible: boolean
+          owner_id: string
+          owner_username: string
+        }[]
+      }
+      _validate_season_config: {
+        Args: { _config_id: string }
+        Returns: undefined
+      }
+      admin_get_season_setup: { Args: never; Returns: Json }
+      admin_set_season_participants: {
+        Args: { _club_ids: string[]; _config_id: string }
+        Returns: Json
+      }
       admin_set_user_status: {
         Args: {
           _new_status: Database["public"]["Enums"]["user_status"]
@@ -1051,15 +1600,7 @@ export type Database = {
           target_user_id: string
         }[]
       }
-      admin_get_season_setup: { Args: Record<PropertyKey, never>; Returns: Json }
-      admin_set_season_participants: {
-        Args: { _club_ids: string[]; _config_id: string }
-        Returns: Json
-      }
-      admin_upsert_season_setup: {
-        Args: { _config: Json }
-        Returns: Json
-      }
+      admin_upsert_season_setup: { Args: { _config: Json }; Returns: Json }
       buy_player_from_system: {
         Args: { _club_player_id: string }
         Returns: {
@@ -1095,16 +1636,10 @@ export type Database = {
         Args: { _abbreviation: string; _badge_code: string; _name: string }
         Returns: string
       }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      get_current_round_state: { Args: Record<PropertyKey, never>; Returns: Json }
-      get_season_history: { Args: Record<PropertyKey, never>; Returns: Json }
-      get_season_operational_state: { Args: Record<PropertyKey, never>; Returns: Json }
+      get_current_round_state: { Args: never; Returns: Json }
+      get_match_public_details: { Args: { _match_id: string }; Returns: Json }
+      get_season_history: { Args: never; Returns: Json }
+      get_season_operational_state: { Args: never; Returns: Json }
       get_season_standings: {
         Args: { _season_id?: string }
         Returns: {
@@ -1122,19 +1657,14 @@ export type Database = {
           wins: number
         }[]
       }
-      is_approved_user: { Args: { _user_id?: string }; Returns: boolean }
-      list_season_club_eligibility: {
-        Args: { _include_private?: boolean }
-        Returns: {
-          abbreviation: string
-          club_id: string
-          club_name: string
-          ineligible_reason: string | null
-          is_eligible: boolean
-          owner_id: string | null
-          owner_username: string | null
-        }[]
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
+      is_approved_user: { Args: { _user_id?: string }; Returns: boolean }
       list_match_score_summaries: {
         Args: { _match_id?: string }
         Returns: {
@@ -1154,6 +1684,18 @@ export type Database = {
           round_number: number
           starts_at: string
           status: Database["public"]["Enums"]["match_status"]
+        }[]
+      }
+      list_season_club_eligibility: {
+        Args: { _include_private?: boolean }
+        Returns: {
+          abbreviation: string
+          club_id: string
+          club_name: string
+          ineligible_reason: string
+          is_eligible: boolean
+          owner_id: string
+          owner_username: string
         }[]
       }
       normalize_club_name: { Args: { _name: string }; Returns: string }
@@ -1185,6 +1727,8 @@ export type Database = {
           starter_count: number
         }[]
       }
+      season_finish: { Args: { _season_id?: string }; Returns: Json }
+      season_start: { Args: { _config_id: string }; Returns: Json }
       sell_player_to_system: {
         Args: { _club_player_id: string }
         Returns: {
@@ -1195,8 +1739,8 @@ export type Database = {
           roster_size: number
         }[]
       }
-      season_finish: { Args: { _season_id?: string }; Returns: Json }
-      season_start: { Args: { _config_id: string }; Returns: Json }
+      simulate_match: { Args: { _match_id: string }; Returns: Json }
+      simulate_round: { Args: { _round_id: string }; Returns: Json }
       train_club_player: {
         Args: { _attribute: string; _club_player_id: string }
         Returns: {

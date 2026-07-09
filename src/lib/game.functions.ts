@@ -4,7 +4,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { systemBuyPriceCents, systemSellPriceCents } from "@/domain/calculators/prices";
 import { PLAYER_ATTRIBUTE_KEYS } from "@/domain/enums";
-import type { MatchDetails, MatchEvent, MatchFinalResult, MatchScoreSummary } from "@/domain/types";
+import type {
+  JsonValue,
+  MatchDetails,
+  MatchEvent,
+  MatchFinalResult,
+  MatchScoreSummary,
+} from "@/domain/types";
 import type { Database } from "@/integrations/supabase/types";
 import { canRequestMatchEvents } from "@/lib/match-access";
 
@@ -243,6 +249,26 @@ export const getMyClub = createServerFn({ method: "GET" })
   });
 
 const matchIdInput = z.object({ matchId: z.string().uuid() });
+const roundIdInput = z.object({ roundId: z.string().uuid() });
+
+type JsonRpcResponse = {
+  data: JsonValue | null;
+  error: { message: string } | null;
+};
+
+async function callJsonRpc(
+  supabase: SupabaseClient<Database>,
+  functionName: string,
+  args?: Record<string, unknown>,
+): Promise<JsonValue> {
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args?: Record<string, unknown>,
+  ) => Promise<JsonRpcResponse>;
+  const { data, error } = await rpc(functionName, args);
+  if (error) throw new Error(error.message);
+  return data;
+}
 
 function asMatchSummary(row: Record<string, unknown>): MatchScoreSummary {
   return {
@@ -334,4 +360,41 @@ export const getMatchEvents = createServerFn({ method: "GET" })
 
     if (error) throw new Error(error.message);
     return { events: (events ?? []) as MatchEvent[] };
+  });
+
+export const getCurrentRoundState = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const state = await callJsonRpc(context.supabase, "get_current_round_state");
+    return { state };
+  });
+
+export const getMatchPublicDetails = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => matchIdInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const details = await callJsonRpc(context.supabase, "get_match_public_details", {
+      _match_id: data.matchId,
+    });
+    return { details };
+  });
+
+export const simulateMatchAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => matchIdInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const result = await callJsonRpc(context.supabase, "simulate_match", {
+      _match_id: data.matchId,
+    });
+    return { result };
+  });
+
+export const simulateRoundAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => roundIdInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const result = await callJsonRpc(context.supabase, "simulate_round", {
+      _round_id: data.roundId,
+    });
+    return { result };
   });

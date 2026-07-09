@@ -2,10 +2,17 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { getMatchEvents, getMe, getMyClub, listMatchSummaries } from "@/lib/game.functions";
+import {
+  getMatchEvents,
+  getMatchPublicDetails,
+  getMe,
+  getMyClub,
+  listMatchSummaries,
+} from "@/lib/game.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { centsToReal } from "@/domain/rules/validators";
 import { canRequestMatchEvents, mapMatchEventsErrorMessage } from "@/lib/match-access";
+import type { JsonValue } from "@/domain/types";
 
 export const Route = createFileRoute("/_authenticated/app")({
   component: AppHome,
@@ -17,6 +24,7 @@ function AppHome() {
   const clubFn = useServerFn(getMyClub);
   const matchesFn = useServerFn(listMatchSummaries);
   const eventsFn = useServerFn(getMatchEvents);
+  const detailsFn = useServerFn(getMatchPublicDetails);
   const [openMatchId, setOpenMatchId] = useState<string | null>(null);
 
   const me = useQuery({ queryKey: ["me"], queryFn: () => meFn() });
@@ -40,6 +48,11 @@ function AppHome() {
     queryKey: ["matchEvents", openMatchId],
     queryFn: () => eventsFn({ data: { matchId: openMatchId ?? "" } }),
     enabled: Boolean(openMatchId) && canViewSelectedEvents,
+  });
+  const publicDetails = useQuery({
+    queryKey: ["matchPublicDetails", openMatchId],
+    queryFn: () => detailsFn({ data: { matchId: openMatchId ?? "" } }),
+    enabled: Boolean(openMatchId),
   });
 
   if (me.isLoading)
@@ -164,37 +177,52 @@ function AppHome() {
                         {match.away_goals} <b>{match.away_club_abbreviation}</b>
                       </p>
                     </div>
-                    {canViewEvents ? (
-                      <button
-                        type="button"
-                        onClick={() => setOpenMatchId(isOpen ? null : match.match_id)}
-                        className="rounded-md border border-slate-700 px-2 py-1 text-xs"
-                      >
-                        {isOpen ? "Ocultar eventos" : "Ver eventos"}
-                      </button>
-                    ) : (
-                      <p className="max-w-xs text-xs text-slate-500">
-                        Eventos detalhados disponiveis somente para partidas do seu clube.
-                      </p>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setOpenMatchId(isOpen ? null : match.match_id)}
+                      className="rounded-md border border-slate-700 px-2 py-1 text-xs"
+                    >
+                      {isOpen ? "Fechar detalhe" : "Abrir detalhe"}
+                    </button>
                   </div>
 
-                  {isOpen && canViewEvents && (
+                  {isOpen && (
                     <div className="mt-3 border-t border-slate-900 pt-3 text-sm">
-                      {events.isLoading ? (
-                        <p className="text-slate-400">Carregando eventos...</p>
-                      ) : events.error ? (
-                        <p className="text-red-400">{mapMatchEventsErrorMessage(events.error)}</p>
-                      ) : events.data?.events.length ? (
-                        <ol className="space-y-1">
-                          {events.data.events.map((event) => (
-                            <li key={event.id}>
-                              {event.minute}' - {event.event_type}
-                            </li>
-                          ))}
-                        </ol>
+                      {publicDetails.isLoading ? (
+                        <p className="text-slate-400">Carregando detalhe...</p>
+                      ) : publicDetails.error ? (
+                        <p className="text-red-400">Nao foi possivel carregar o detalhe.</p>
                       ) : (
-                        <p className="text-slate-400">Nenhum evento registrado.</p>
+                        <MatchPublicDetail details={publicDetails.data?.details ?? null} />
+                      )}
+
+                      {!canViewEvents && (
+                        <p className="mt-3 text-xs text-slate-500">
+                          Eventos detalhados disponiveis somente para partidas do seu clube.
+                        </p>
+                      )}
+
+                      {canViewEvents && (
+                        <div className="mt-3">
+                          <p className="text-xs uppercase text-slate-500">Eventos</p>
+                          {events.isLoading ? (
+                            <p className="text-slate-400">Carregando eventos...</p>
+                          ) : events.error ? (
+                            <p className="text-red-400">
+                              {mapMatchEventsErrorMessage(events.error)}
+                            </p>
+                          ) : events.data?.events.length ? (
+                            <ol className="space-y-1">
+                              {events.data.events.map((event) => (
+                                <li key={event.id}>
+                                  {event.minute}' - {event.event_type}
+                                </li>
+                              ))}
+                            </ol>
+                          ) : (
+                            <p className="text-slate-400">Nenhum evento registrado.</p>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
@@ -218,6 +246,86 @@ function AppHome() {
       </button>
     </Shell>
   );
+}
+
+function MatchPublicDetail({ details }: { details: JsonValue | null }) {
+  const record = asRecord(details);
+  if (!record) return null;
+
+  const statistics = asArray(record.statistics);
+  const lineups = asArray(record.lineups);
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-2 text-xs sm:grid-cols-2">
+        <p>Status: {text(record.status, "agendada")}</p>
+        <p>Data: {text(record.starts_at, "-")}</p>
+      </div>
+
+      {lineups.length > 0 && (
+        <div>
+          <p className="text-xs uppercase text-slate-500">Escalacao usada</p>
+          <div className="mt-1 grid gap-1 text-xs sm:grid-cols-2">
+            {lineups.slice(0, 10).map((item, index) => {
+              const lineup = asRecord(item);
+              if (!lineup) return null;
+              return (
+                <p key={`${text(lineup.club_id, "club")}-${index}`}>
+                  {text(lineup.used_position, "-")} {text(lineup.slot_index, "-")} -{" "}
+                  {text(lineup.lineup_origin, "-")} / {text(lineup.formation, "-")} /{" "}
+                  {text(lineup.play_style, "-")}
+                </p>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {statistics.length > 0 && (
+        <div>
+          <p className="text-xs uppercase text-slate-500">Estatisticas</p>
+          <div className="mt-1 grid gap-2 text-xs sm:grid-cols-2">
+            {statistics.map((item) => {
+              const stats = asRecord(item);
+              if (!stats) return null;
+              return (
+                <div
+                  key={text(stats.club_id, "club")}
+                  className="rounded border border-slate-900 p-2"
+                >
+                  <p>Clube: {text(stats.club_id, "-")}</p>
+                  <p>Posse: {text(stats.possession, "0")}%</p>
+                  <p>
+                    Chances {text(stats.chances, "0")} / Finalizacoes {text(stats.shots, "0")} / No
+                    alvo {text(stats.shots_on_target, "0")}
+                  </p>
+                  <p>
+                    Defesas {text(stats.saves, "0")} / Gols {text(stats.goals, "0")}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function text(value: unknown, fallback: string): string {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return fallback;
 }
 
 function Shell({ children }: { children: React.ReactNode }) {

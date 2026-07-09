@@ -19,6 +19,12 @@ import {
   adminSetSeasonParticipants,
   adminStartSeason,
 } from "@/lib/season.functions";
+import {
+  getCurrentRoundState,
+  listMatchSummaries,
+  simulateMatchAdmin,
+  simulateRoundAdmin,
+} from "@/lib/game.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
@@ -28,9 +34,21 @@ function AdminPage() {
   const listFn = useServerFn(adminListPendingUsers);
   const statusFn = useServerFn(adminSetUserStatus);
   const resetFn = useServerFn(adminResetUserPassword);
+  const roundStateFn = useServerFn(getCurrentRoundState);
+  const matchesFn = useServerFn(listMatchSummaries);
+  const simulateMatchFn = useServerFn(simulateMatchAdmin);
+  const simulateRoundFn = useServerFn(simulateRoundAdmin);
   const qc = useQueryClient();
 
   const list = useQuery({ queryKey: ["admin", "users"], queryFn: () => listFn() });
+  const roundState = useQuery({
+    queryKey: ["admin", "currentRound"],
+    queryFn: () => roundStateFn(),
+  });
+  const matches = useQuery({
+    queryKey: ["admin", "matchSummaries"],
+    queryFn: () => matchesFn(),
+  });
   const [tempPassword, setTempPassword] = useState<{ username: string; password: string } | null>(
     null,
   );
@@ -50,6 +68,27 @@ function AdminPage() {
     },
     onSuccess: (data) => setTempPassword({ username: data.username, password: data.tempPassword }),
   });
+  const runMatch = useMutation({
+    mutationFn: (matchId: string) => simulateMatchFn({ data: { matchId } }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin", "matchSummaries"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "currentRound"] });
+    },
+  });
+  const runRound = useMutation({
+    mutationFn: (roundId: string) => simulateRoundFn({ data: { roundId } }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin", "matchSummaries"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "currentRound"] });
+    },
+  });
+
+  const state = asRecord(roundState.data?.state);
+  const currentRound = asRecord(state?.current_round);
+  const currentRoundId = text(currentRound?.round_id, "");
+  const currentRoundNumber = Number(text(currentRound?.round_number, "0"));
+  const currentMatches =
+    matches.data?.matches.filter((match) => match.round_number === currentRoundNumber) ?? [];
 
   async function copyPassword() {
     if (!tempPassword) return;
@@ -78,6 +117,69 @@ function AdminPage() {
       </p>
 
       <AdminSeasonSection />
+      <section className="mt-6 rounded-md border border-slate-800 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-medium">Simulacao de partidas</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Rodada atual: {currentRoundNumber > 0 ? currentRoundNumber : "indisponivel"} -{" "}
+              {text(currentRound?.status, "sem status")}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => currentRoundId && runRound.mutate(currentRoundId)}
+            disabled={!currentRoundId || runRound.isPending || currentMatches.length === 0}
+            className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+          >
+            Simular rodada
+          </button>
+        </div>
+
+        {roundState.error && (
+          <p className="mt-3 text-sm text-red-400">{adminErrorMessage(roundState.error)}</p>
+        )}
+        {runMatch.error && (
+          <p className="mt-3 text-sm text-red-400">{adminErrorMessage(runMatch.error)}</p>
+        )}
+        {runRound.error && (
+          <p className="mt-3 text-sm text-red-400">{adminErrorMessage(runRound.error)}</p>
+        )}
+        {(runMatch.data || runRound.data) && (
+          <p className="mt-3 text-xs text-emerald-300">Resultado atualizado.</p>
+        )}
+
+        <div className="mt-4 space-y-2 text-sm">
+          {matches.isLoading ? (
+            <p className="text-slate-400">Carregando partidas...</p>
+          ) : currentMatches.length ? (
+            currentMatches.map((match) => (
+              <div
+                key={match.match_id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-900 p-2"
+              >
+                <div>
+                  <p className="text-xs text-slate-500">Status: {match.status}</p>
+                  <p>
+                    <b>{match.home_club_abbreviation}</b> {match.home_goals} x {match.away_goals}{" "}
+                    <b>{match.away_club_abbreviation}</b>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => runMatch.mutate(match.match_id)}
+                  disabled={match.status === "finished" || runMatch.isPending || runRound.isPending}
+                  className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+                >
+                  Simular partida
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="text-slate-400">Nenhuma partida na rodada atual.</p>
+          )}
+        </div>
+      </section>
 
       <table className="mt-6 w-full text-sm">
         <thead className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
@@ -414,8 +516,12 @@ function adminErrorMessage(error: unknown): string {
     season_selected_club_ineligible: "Um dos clubes selecionados nao esta elegivel.",
     active_season_exists: "Ja existe uma temporada ativa.",
     season_has_pending_matches: "A temporada ainda tem partidas pendentes.",
-    season_not_active: "Nao existe temporada ativa para encerrar.",
+    season_not_active: "Temporada nao esta ativa.",
     season_prize_already_credited: "A premiacao desta temporada ja foi creditada.",
+    lineup_auto_insufficient_players: "Um clube nao tem jogadores elegiveis suficientes.",
+    match_not_found: "Partida nao encontrada.",
+    round_not_found: "Rodada nao encontrada.",
+    match_not_simulable: "Partida nao esta em status simulavel.",
   };
   const code = Object.keys(messages).find((key) => message.includes(key));
   return code ? messages[code] : "Não foi possível concluir. Tente novamente.";
@@ -544,6 +650,18 @@ function readString(value: unknown, fallback: string): string {
 
 function readNumber(value: unknown, fallback: number): number {
   return typeof value === "number" ? value : fallback;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function text(value: unknown, fallback: string): string {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return fallback;
 }
 
 function Shell({ children }: { children: React.ReactNode }) {

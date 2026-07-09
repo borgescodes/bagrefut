@@ -15,7 +15,9 @@ import { Route as AguardandoAprovacaoRouteImport } from './routes/aguardando-apr
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTrocarSenhaRouteImport } from './routes/_authenticated/trocar-senha'
+import { Route as AuthenticatedElencoRouteImport } from './routes/_authenticated/elenco'
 import { Route as AuthenticatedCriarClubeRouteImport } from './routes/_authenticated/criar-clube'
+import { Route as AuthenticatedClassificacaoRouteImport } from './routes/_authenticated/classificacao'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAbrirPacoteRouteImport } from './routes/_authenticated/abrir-pacote'
@@ -50,11 +52,22 @@ const AuthenticatedTrocarSenhaRoute =
     path: '/trocar-senha',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedElencoRoute = AuthenticatedElencoRouteImport.update({
+  id: '/elenco',
+  path: '/elenco',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCriarClubeRoute = AuthenticatedCriarClubeRouteImport.update({
   id: '/criar-clube',
   path: '/criar-clube',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedClassificacaoRoute =
+  AuthenticatedClassificacaoRouteImport.update({
+    id: '/classificacao',
+    path: '/classificacao',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -80,7 +93,9 @@ export interface FileRoutesByFullPath {
   '/abrir-pacote': typeof AuthenticatedAbrirPacoteRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/app': typeof AuthenticatedAppRoute
+  '/classificacao': typeof AuthenticatedClassificacaoRoute
   '/criar-clube': typeof AuthenticatedCriarClubeRoute
+  '/elenco': typeof AuthenticatedElencoRoute
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
 }
 export interface FileRoutesByTo {
@@ -91,7 +106,9 @@ export interface FileRoutesByTo {
   '/abrir-pacote': typeof AuthenticatedAbrirPacoteRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/app': typeof AuthenticatedAppRoute
+  '/classificacao': typeof AuthenticatedClassificacaoRoute
   '/criar-clube': typeof AuthenticatedCriarClubeRoute
+  '/elenco': typeof AuthenticatedElencoRoute
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
 }
 export interface FileRoutesById {
@@ -104,7 +121,9 @@ export interface FileRoutesById {
   '/_authenticated/abrir-pacote': typeof AuthenticatedAbrirPacoteRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/app': typeof AuthenticatedAppRoute
+  '/_authenticated/classificacao': typeof AuthenticatedClassificacaoRoute
   '/_authenticated/criar-clube': typeof AuthenticatedCriarClubeRoute
+  '/_authenticated/elenco': typeof AuthenticatedElencoRoute
   '/_authenticated/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
 }
 export interface FileRouteTypes {
@@ -117,7 +136,9 @@ export interface FileRouteTypes {
     | '/abrir-pacote'
     | '/admin'
     | '/app'
+    | '/classificacao'
     | '/criar-clube'
+    | '/elenco'
     | '/trocar-senha'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -128,7 +149,9 @@ export interface FileRouteTypes {
     | '/abrir-pacote'
     | '/admin'
     | '/app'
+    | '/classificacao'
     | '/criar-clube'
+    | '/elenco'
     | '/trocar-senha'
   id:
     | '__root__'
@@ -140,7 +163,9 @@ export interface FileRouteTypes {
     | '/_authenticated/abrir-pacote'
     | '/_authenticated/admin'
     | '/_authenticated/app'
+    | '/_authenticated/classificacao'
     | '/_authenticated/criar-clube'
+    | '/_authenticated/elenco'
     | '/_authenticated/trocar-senha'
   fileRoutesById: FileRoutesById
 }
@@ -196,11 +221,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTrocarSenhaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/elenco': {
+      id: '/_authenticated/elenco'
+      path: '/elenco'
+      fullPath: '/elenco'
+      preLoaderRoute: typeof AuthenticatedElencoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/criar-clube': {
       id: '/_authenticated/criar-clube'
       path: '/criar-clube'
       fullPath: '/criar-clube'
       preLoaderRoute: typeof AuthenticatedCriarClubeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/classificacao': {
+      id: '/_authenticated/classificacao'
+      path: '/classificacao'
+      fullPath: '/classificacao'
+      preLoaderRoute: typeof AuthenticatedClassificacaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/app': {
@@ -231,7 +270,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAbrirPacoteRoute: typeof AuthenticatedAbrirPacoteRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAppRoute: typeof AuthenticatedAppRoute
+  AuthenticatedClassificacaoRoute: typeof AuthenticatedClassificacaoRoute
   AuthenticatedCriarClubeRoute: typeof AuthenticatedCriarClubeRoute
+  AuthenticatedElencoRoute: typeof AuthenticatedElencoRoute
   AuthenticatedTrocarSenhaRoute: typeof AuthenticatedTrocarSenhaRoute
 }
 
@@ -239,7 +280,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAbrirPacoteRoute: AuthenticatedAbrirPacoteRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAppRoute: AuthenticatedAppRoute,
+  AuthenticatedClassificacaoRoute: AuthenticatedClassificacaoRoute,
   AuthenticatedCriarClubeRoute: AuthenticatedCriarClubeRoute,
+  AuthenticatedElencoRoute: AuthenticatedElencoRoute,
   AuthenticatedTrocarSenhaRoute: AuthenticatedTrocarSenhaRoute,
 }
 
@@ -256,3 +299,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

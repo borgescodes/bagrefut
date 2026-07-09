@@ -102,6 +102,14 @@ function AppHome() {
             <Link to="/abrir-pacote" className="mt-2 inline-block underline">
               Abrir pacote inicial →
             </Link>
+            <br />
+            <Link to="/elenco" className="mt-2 inline-block underline">
+              Ver elenco e escalacao →
+            </Link>
+            <br />
+            <Link to="/classificacao" className="mt-2 inline-block underline">
+              Ver classificacao →
+            </Link>
           </div>
         ) : (
           <div className="mt-2 space-y-2">
@@ -127,6 +135,9 @@ function AppHome() {
 
       <section className="mt-6 rounded-md border border-slate-800 p-4">
         <h3 className="font-medium">Partidas</h3>
+        <Link to="/classificacao" className="mt-2 inline-block text-sm underline">
+          Classificacao e temporada →
+        </Link>
         {matches.isLoading ? (
           <p className="mt-2 text-sm text-slate-400">Carregando partidas...</p>
         ) : matches.error ? (

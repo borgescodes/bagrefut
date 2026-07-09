@@ -16,7 +16,12 @@ corretivas:
 | `initial_packs`                  | Approved: proprio pacote; admin le tudo                  | Nenhum; so RPCs                |
 | `initial_pack_items`             | Approved: proprio pacote; admin le tudo                  | Nenhum                         |
 | `wallet_transactions`            | Approved: proprio ledger; admin le tudo                  | Nenhum; ledger imutavel        |
+| `season_configurations`          | Apenas admin approved                                    | Nenhum direto; so RPC admin    |
+| `season_config_participants`     | Apenas admin approved                                    | Nenhum direto; so RPC admin    |
+| `season_prize_config`            | Apenas admin approved                                    | Nenhum direto; so RPC admin    |
 | `seasons`                        | Apenas approved                                          | Nenhum                         |
+| `season_participants`            | Apenas approved                                          | Nenhum                         |
+| `season_final_standings`         | Apenas approved                                          | Nenhum                         |
 | `rounds`                         | Apenas approved                                          | Nenhum                         |
 | `matches`                        | Sem SELECT direto para authenticated; usar resumo seguro | Nenhum                         |
 | `match_events`                   | Approved participante; admin approved tudo               | Nenhum direto                  |
@@ -65,23 +70,33 @@ Todas seguem o padrao obrigatorio:
 - validam `auth.uid()` e permissao do chamador internamente quando mutam dados
 - `REVOKE ALL FROM PUBLIC, anon` + `GRANT` apenas ao role minimo
 
-| Funcao                                               | Grant         | Uso                                  |
-| ---------------------------------------------------- | ------------- | ------------------------------------ |
-| `public.has_role(uuid, app_role)`                    | authenticated | Helper de roles em policies          |
-| `public.is_approved_user(uuid)`                      | authenticated | Helper approved seguro para policies |
-| `public.user_participates_in_match(uuid, uuid)`      | authenticated | Helper seguro de mandante/visitante  |
-| `public.list_match_score_summaries(uuid)`            | authenticated | Resumo seguro de partidas            |
-| `public.handle_new_user()`                           | service_role  | Trigger `on_auth_user_created`       |
-| `public._credit_wallet(...)`                         | service_role  | Interna; chamada por RPCs            |
-| `public._debit_wallet(...)`                          | service_role  | Interna; chamada por RPCs            |
-| `public.create_club(name, abbr, badge)`              | authenticated | Cria clube atomico + saldo + pacote  |
-| `public.update_club_identity(club,name,abbr,badge)`  | authenticated | Edita identidade do clube via regras |
-| `public.open_initial_pack(club_id)`                  | authenticated | Sorteia pacote inicial atomico       |
-| `public.save_lineup(round, formation, style, json)`  | authenticated | Salva escalacao validada             |
-| `public.sell_player_to_system(club_player_id)`       | authenticated | Vende carta ao sistema por 50%       |
-| `public.buy_player_from_system(club_player_id)`      | authenticated | Compra carta do sistema por 100%     |
-| `public.train_club_player(club_player_id, attr)`     | authenticated | Treino diario atomico                |
-| `public.admin_set_user_status(target,status,reason)` | authenticated | Status + audit atomicos              |
+| Funcao                                                 | Grant         | Uso                                  |
+| ------------------------------------------------------ | ------------- | ------------------------------------ |
+| `public.has_role(uuid, app_role)`                      | authenticated | Helper de roles em policies          |
+| `public.is_approved_user(uuid)`                        | authenticated | Helper approved seguro para policies |
+| `public.user_participates_in_match(uuid, uuid)`        | authenticated | Helper seguro de mandante/visitante  |
+| `public.list_match_score_summaries(uuid)`              | authenticated | Resumo seguro de partidas            |
+| `public.handle_new_user()`                             | service_role  | Trigger `on_auth_user_created`       |
+| `public._credit_wallet(...)`                           | service_role  | Interna; chamada por RPCs            |
+| `public._debit_wallet(...)`                            | service_role  | Interna; chamada por RPCs            |
+| `public.create_club(name, abbr, badge)`                | authenticated | Cria clube atomico + saldo + pacote  |
+| `public.update_club_identity(club,name,abbr,badge)`    | authenticated | Edita identidade do clube via regras |
+| `public.open_initial_pack(club_id)`                    | authenticated | Sorteia pacote inicial atomico       |
+| `public.save_lineup(round, formation, style, json)`    | authenticated | Salva escalacao validada             |
+| `public.sell_player_to_system(club_player_id)`         | authenticated | Vende carta ao sistema por 50%       |
+| `public.buy_player_from_system(club_player_id)`        | authenticated | Compra carta do sistema por 100%     |
+| `public.train_club_player(club_player_id, attr)`       | authenticated | Treino diario atomico                |
+| `public.admin_set_user_status(target,status,reason)`   | authenticated | Status + audit atomicos              |
+| `public.list_season_club_eligibility(include_private)` | authenticated | Elegibilidade publica/admin          |
+| `public.get_season_operational_state()`                | authenticated | Estado de espera/temporada           |
+| `public.get_current_round_state()`                     | authenticated | Rodada atual pelo backend            |
+| `public.get_season_standings(season)`                  | authenticated | Classificacao oficial                |
+| `public.get_season_history()`                          | authenticated | Historico publico                    |
+| `public.admin_get_season_setup()`                      | authenticated | Configuracao admin                   |
+| `public.admin_upsert_season_setup(config)`             | authenticated | Salva configuracao admin             |
+| `public.admin_set_season_participants(config,clubs)`   | authenticated | Persiste selecao admin               |
+| `public.season_start(config)`                          | authenticated | Inicia temporada atomicamente        |
+| `public.season_finish(season)`                         | authenticated | Encerra e premia temporada           |
 
 Funcoes puras auxiliares (`calculate_player_overall`,
 `calculate_reference_value_cents`, `training_cost_cents`) tambem usam

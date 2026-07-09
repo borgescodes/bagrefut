@@ -34,8 +34,18 @@ export const PLAYER_SECTORS = [
 export type PlayerSector = (typeof PLAYER_SECTORS)[number];
 
 export type PlayStyle = "balanced" | "offensive" | "defensive";
+export const PLAY_STYLES = [
+  "balanced",
+  "offensive",
+  "defensive",
+] as const satisfies readonly PlayStyle[];
 export type Formation = "1-2-1-1" | "1-1-2-1" | "1-1-1-2" | "0-2-2-1";
-export const FORMATIONS: Formation[] = ["1-2-1-1", "1-1-2-1", "1-1-1-2", "0-2-2-1"];
+export const FORMATIONS = [
+  "1-2-1-1",
+  "1-1-2-1",
+  "1-1-1-2",
+  "0-2-2-1",
+] as const satisfies readonly Formation[];
 
 export type MatchStatus = "scheduled" | "live" | "finished" | "cancelled";
 export type MatchEventType =

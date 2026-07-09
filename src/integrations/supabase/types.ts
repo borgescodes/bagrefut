@@ -1051,6 +1051,15 @@ export type Database = {
           target_user_id: string
         }[]
       }
+      admin_get_season_setup: { Args: Record<PropertyKey, never>; Returns: Json }
+      admin_set_season_participants: {
+        Args: { _club_ids: string[]; _config_id: string }
+        Returns: Json
+      }
+      admin_upsert_season_setup: {
+        Args: { _config: Json }
+        Returns: Json
+      }
       buy_player_from_system: {
         Args: { _club_player_id: string }
         Returns: {
@@ -1093,7 +1102,39 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_current_round_state: { Args: Record<PropertyKey, never>; Returns: Json }
+      get_season_history: { Args: Record<PropertyKey, never>; Returns: Json }
+      get_season_operational_state: { Args: Record<PropertyKey, never>; Returns: Json }
+      get_season_standings: {
+        Args: { _season_id?: string }
+        Returns: {
+          abbreviation: string
+          club_id: string
+          club_name: string
+          draws: number
+          goal_difference: number
+          goals_against: number
+          goals_for: number
+          losses: number
+          played: number
+          points: number
+          position: number
+          wins: number
+        }[]
+      }
       is_approved_user: { Args: { _user_id?: string }; Returns: boolean }
+      list_season_club_eligibility: {
+        Args: { _include_private?: boolean }
+        Returns: {
+          abbreviation: string
+          club_id: string
+          club_name: string
+          ineligible_reason: string | null
+          is_eligible: boolean
+          owner_id: string | null
+          owner_username: string | null
+        }[]
+      }
       list_match_score_summaries: {
         Args: { _match_id?: string }
         Returns: {
@@ -1154,6 +1195,8 @@ export type Database = {
           roster_size: number
         }[]
       }
+      season_finish: { Args: { _season_id?: string }; Returns: Json }
+      season_start: { Args: { _config_id: string }; Returns: Json }
       train_club_player: {
         Args: { _attribute: string; _club_player_id: string }
         Returns: {

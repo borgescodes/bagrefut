@@ -82,6 +82,24 @@ Média ponderada por posição. Pesos somam 100:
 - Cada clube joga exatamente 1 vez por rodada.
 - Returno espelha o turno com casa/fora invertidos.
 - Fixture list fixa e determinística em `src/domain/calculators/schedule.ts`.
+- `season_start` usa a mesma fixture list no Postgres e so inicia com selecao
+  persistida de exatamente 6 clubes elegiveis.
+
+## Temporada e classificacao
+
+- Estados operacionais expostos ao app: `waiting_for_clubs`, `ready_to_start`,
+  `active`, `finished`.
+- Enquanto houver menos de 6 clubes elegiveis, nenhuma temporada inicia e
+  nenhuma rodada/partida parcial e criada.
+- Se houver mais de 6 clubes elegiveis, o admin precisa escolher quais 6 entram;
+  nao ha selecao aleatoria.
+- Classificacao usa somente partidas `finished`: vitoria 3 pontos, empate 1,
+  derrota 0.
+- Desempate: pontos, vitorias, saldo de gols, gols pro, nome do clube e `club_id`
+  como criterio deterministico final. Confronto direto nao foi implementado
+  porque nao havia regra anterior definida.
+- Premios finais sao valores inteiros em centavos, configurados por posicao e
+  creditados uma unica vez como `season_prize` no ledger.
 
 ## Janela diária (América/Belém)
 

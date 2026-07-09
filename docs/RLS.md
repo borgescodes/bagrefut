@@ -36,6 +36,7 @@ migrations corretivas:
 | `transfer_offer_items`           | Approved: itens de ofertas próprias                    | Nenhum                         |
 | `push_subscriptions`             | Approved: próprias; admin lê tudo                      | Approved gerencia próprias     |
 | `admin_audit_logs`               | Apenas admin approved                                  | Nenhum; só funções seguras     |
+| `operational_job_runs`           | Nenhum direto; admin via RPC                           | Nenhum; service_role apenas    |
 
 Nenhuma tabela concede acesso a `anon`.
 
@@ -57,6 +58,15 @@ tem acesso administrativo quando o próprio profile também está `approved`.
   `matches`, `match_events`, `match_lineup_snapshots` ou `match_statistics`.
 - `public.simulate_match(uuid)` e `public.simulate_round(uuid)` validam admin
   approved internamente.
+- Os cores internos `_match_simulate_internal`, `_round_simulate_internal`,
+  `_round_finalize_internal` e `_season_finish_internal` nao dependem de
+  `auth.uid()` e sao executaveis apenas por `service_role`/`postgres`.
+- `public.process_due_rounds(timestamptz)` e
+  `public._operational_process_job(...)` sao service-only; `authenticated` nao
+  recebe grant. Retry operacional usa `_operational_retry_job_run(uuid)`, tambem
+  service-only.
+- `public.admin_list_operational_job_runs(limit,status)` valida admin approved e
+  e o unico caminho autenticado para leitura de `operational_job_runs`.
 - A simulação persiste snapshots, estatísticas, eventos, placar e prêmio por RPC
   transacional.
 - Índices únicos e bloqueio da partida evitam duplicação de simulação, eventos,
@@ -72,36 +82,39 @@ Todas seguem o padrão obrigatório:
 - `REVOKE ALL FROM PUBLIC, anon`
 - `GRANT EXECUTE` apenas ao role mínimo necessário
 
-| Função                                                 | Grant         | Uso                                       |
-| ------------------------------------------------------ | ------------- | ----------------------------------------- |
-| `public.has_role(uuid, app_role)`                      | authenticated | Helper de roles em policies               |
-| `public.is_approved_user(uuid)`                        | authenticated | Helper approved para policies             |
-| `public.user_participates_in_match(uuid, uuid)`        | authenticated | Valida participação na partida            |
-| `public.list_match_score_summaries(uuid)`              | authenticated | Resumo seguro de partidas                 |
-| `public.get_match_public_details(uuid)`                | authenticated | Detalhe público sem seed                  |
-| `public.handle_new_user()`                             | service_role  | Trigger `on_auth_user_created`            |
-| `public._credit_wallet(...)`                           | service_role  | Crédito interno de carteira               |
-| `public._debit_wallet(...)`                            | service_role  | Débito interno de carteira                |
-| `public.create_club(name, abbr, badge)`                | authenticated | Cria clube, saldo e pacote atomicamente   |
-| `public.update_club_identity(club,name,abbr,badge)`    | authenticated | Edita identidade do clube                 |
-| `public.open_initial_pack(club_id)`                    | authenticated | Abre pacote inicial atomicamente          |
-| `public.save_lineup(round, formation, style, json)`    | authenticated | Salva escalação validada                  |
-| `public.sell_player_to_system(club_player_id)`         | authenticated | Vende carta ao sistema                    |
-| `public.buy_player_from_system(club_player_id)`        | authenticated | Compra carta do sistema                   |
-| `public.train_club_player(club_player_id, attr)`       | authenticated | Executa treino diário                     |
-| `public.admin_set_user_status(target,status,reason)`   | authenticated | Atualiza status e grava auditoria         |
-| `public.list_season_club_eligibility(include_private)` | authenticated | Lista elegibilidade pública/admin         |
-| `public.get_season_operational_state()`                | authenticated | Estado operacional da temporada           |
-| `public.get_current_round_state()`                     | authenticated | Rodada atual definida pelo backend        |
-| `public.get_season_standings(season)`                  | authenticated | Classificação oficial                     |
-| `public.get_season_history()`                          | authenticated | Histórico de temporadas                   |
-| `public.admin_get_season_setup()`                      | authenticated | Consulta configuração admin               |
-| `public.admin_upsert_season_setup(config)`             | authenticated | Salva configuração admin                  |
-| `public.admin_set_season_participants(config,clubs)`   | authenticated | Persiste seleção dos clubes               |
-| `public.season_start(config)`                          | authenticated | Inicia temporada atomicamente             |
-| `public.season_finish(season)`                         | authenticated | Encerra e premia temporada                |
-| `public.simulate_match(match_id)`                      | authenticated | Admin simula partida de forma idempotente |
-| `public.simulate_round(round_id)`                      | authenticated | Admin simula rodada manualmente           |
+| Função                                                 | Grant         | Uso                                        |
+| ------------------------------------------------------ | ------------- | ------------------------------------------ |
+| `public.has_role(uuid, app_role)`                      | authenticated | Helper de roles em policies                |
+| `public.is_approved_user(uuid)`                        | authenticated | Helper approved para policies              |
+| `public.user_participates_in_match(uuid, uuid)`        | authenticated | Valida participação na partida             |
+| `public.list_match_score_summaries(uuid)`              | authenticated | Resumo seguro de partidas                  |
+| `public.get_match_public_details(uuid)`                | authenticated | Detalhe público sem seed                   |
+| `public.handle_new_user()`                             | service_role  | Trigger `on_auth_user_created`             |
+| `public._credit_wallet(...)`                           | service_role  | Crédito interno de carteira                |
+| `public._debit_wallet(...)`                            | service_role  | Débito interno de carteira                 |
+| `public.create_club(name, abbr, badge)`                | authenticated | Cria clube, saldo e pacote atomicamente    |
+| `public.update_club_identity(club,name,abbr,badge)`    | authenticated | Edita identidade do clube                  |
+| `public.open_initial_pack(club_id)`                    | authenticated | Abre pacote inicial atomicamente           |
+| `public.save_lineup(round, formation, style, json)`    | authenticated | Salva escalação validada                   |
+| `public.sell_player_to_system(club_player_id)`         | authenticated | Vende carta ao sistema                     |
+| `public.buy_player_from_system(club_player_id)`        | authenticated | Compra carta do sistema                    |
+| `public.train_club_player(club_player_id, attr)`       | authenticated | Executa treino diário                      |
+| `public.admin_set_user_status(target,status,reason)`   | authenticated | Atualiza status e grava auditoria          |
+| `public.list_season_club_eligibility(include_private)` | authenticated | Lista elegibilidade pública/admin          |
+| `public.get_season_operational_state()`                | authenticated | Estado operacional da temporada            |
+| `public.get_current_round_state()`                     | authenticated | Rodada atual definida pelo backend         |
+| `public.get_season_standings(season)`                  | authenticated | Classificação oficial                      |
+| `public.get_season_history()`                          | authenticated | Histórico de temporadas                    |
+| `public.admin_get_season_setup()`                      | authenticated | Consulta configuração admin                |
+| `public.admin_upsert_season_setup(config)`             | authenticated | Salva configuração admin                   |
+| `public.admin_set_season_participants(config,clubs)`   | authenticated | Persiste seleção dos clubes                |
+| `public.season_start(config)`                          | authenticated | Inicia temporada atomicamente              |
+| `public.season_finish(season)`                         | authenticated | Encerra e premia temporada                 |
+| `public.simulate_match(match_id)`                      | authenticated | Admin simula partida de forma idempotente  |
+| `public.simulate_round(round_id)`                      | authenticated | Admin simula rodada manualmente            |
+| `public.admin_list_operational_job_runs(limit,status)` | authenticated | Admin consulta ultimas execucoes           |
+| `public.process_due_rounds(now)`                       | service_role  | Processa etapas operacionais vencidas      |
+| `public._operational_retry_job_run(job_run)`           | service_role  | Reenfileira failed/dead preservando result |
 
 Funções puras auxiliares, como `calculate_player_overall`,
 `calculate_reference_value_cents` e `training_cost_cents`, também usam

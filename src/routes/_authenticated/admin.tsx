@@ -20,6 +20,11 @@ import {
   adminStartSeason,
 } from "@/lib/season.functions";
 import {
+  adminListOperationalJobRuns,
+  adminRetryOperationalJobRun,
+  type OperationalJobRun,
+} from "@/lib/operational-jobs.functions";
+import {
   getCurrentRoundState,
   listMatchSummaries,
   simulateMatchAdmin,
@@ -180,6 +185,8 @@ function AdminPage() {
           )}
         </div>
       </section>
+
+      <AdminOperationalProcessingSection />
 
       <table className="mt-6 w-full text-sm">
         <thead className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
@@ -495,6 +502,101 @@ function AdminSeasonSection() {
   );
 }
 
+function AdminOperationalProcessingSection() {
+  const listFn = useServerFn(adminListOperationalJobRuns);
+  const retryFn = useServerFn(adminRetryOperationalJobRun);
+  const qc = useQueryClient();
+
+  const jobs = useQuery({
+    queryKey: ["admin", "operationalJobs"],
+    queryFn: () => listFn(),
+  });
+  const retry = useMutation({
+    mutationFn: (jobRunId: string) => retryFn({ data: { jobRunId } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "operationalJobs"] }),
+  });
+
+  const rows = jobs.data?.jobs ?? [];
+  const latest = rows[0];
+  const failedCount = rows.filter((job) => job.status === "failed").length;
+  const deadCount = rows.filter((job) => job.status === "dead").length;
+  const succeededCount = rows.filter((job) => job.status === "succeeded").length;
+
+  return (
+    <section className="mt-6 rounded-md border border-slate-800 p-4">
+      <div>
+        <h2 className="font-medium">Processamento operacional</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Ultima execucao: {latest ? jobDate(latest.finished_at ?? latest.started_at) : "sem dados"}
+        </p>
+      </div>
+
+      {jobs.error && <p className="mt-3 text-sm text-red-400">{adminErrorMessage(jobs.error)}</p>}
+      {retry.error && <p className="mt-3 text-sm text-red-400">{adminErrorMessage(retry.error)}</p>}
+
+      <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+        <AdminInfo label="Failed" value={String(failedCount)} />
+        <AdminInfo label="Dead" value={String(deadCount)} />
+        <AdminInfo label="Succeeded" value={String(succeededCount)} />
+      </div>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
+          <thead className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
+            <tr>
+              <th className="py-2">Status</th>
+              <th>Job</th>
+              <th>Scheduled for</th>
+              <th>Attempt count</th>
+              <th>Last error</th>
+              <th className="text-right">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {jobs.isLoading ? (
+              <tr>
+                <td colSpan={6} className="py-3 text-slate-400">
+                  Carregando execucoes...
+                </td>
+              </tr>
+            ) : rows.length ? (
+              rows.map((job) => (
+                <tr key={job.id} className="border-b border-slate-900">
+                  <td className="py-2">{job.status}</td>
+                  <td>{job.job_type}</td>
+                  <td>{jobDate(job.scheduled_for)}</td>
+                  <td>
+                    {job.attempt_count} de {job.max_attempts}
+                  </td>
+                  <td className="max-w-[220px] truncate">{jobErrorText(job.last_error)}</td>
+                  <td className="text-right">
+                    {(job.status === "failed" || job.status === "dead") && (
+                      <button
+                        type="button"
+                        onClick={() => retry.mutate(job.id)}
+                        disabled={retry.isPending}
+                        className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+                      >
+                        Retry
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="py-3 text-slate-400">
+                  Nenhuma execucao registrada.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 function adminErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   const messages: Record<string, string> = {
@@ -522,9 +624,36 @@ function adminErrorMessage(error: unknown): string {
     match_not_found: "Partida nao encontrada.",
     round_not_found: "Rodada nao encontrada.",
     match_not_simulable: "Partida nao esta em status simulavel.",
+    job_run_not_retryable: "Execucao nao pode ser reenfileirada.",
+    operational_job_status_invalid: "Status operacional invalido.",
   };
   const code = Object.keys(messages).find((key) => message.includes(key));
   return code ? messages[code] : "Não foi possível concluir. Tente novamente.";
+}
+
+function jobDate(value: string | null): string {
+  if (!value) return "sem data";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function jobErrorText(value: OperationalJobRun["last_error"]): string {
+  if (!value) return "-";
+  const lower = value.toLowerCase();
+  if (
+    lower.includes("select ") ||
+    lower.includes(" from ") ||
+    lower.includes("public.") ||
+    lower.includes("auth.") ||
+    value.includes("\n")
+  ) {
+    return "Erro operacional. Consulte o banco.";
+  }
+  return value;
 }
 
 function AdminInfo({ label, value }: { label: string; value: string }) {

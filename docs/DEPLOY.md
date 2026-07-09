@@ -47,15 +47,25 @@ Testes SQL em `supabase/tests/database/*.sql` sao executados manualmente no SQL
 Editor Lovable: primeiro a migration, depois o teste SQL, mantendo
 transacao/rollback quando o teste tiver esse preparo.
 
-## Cron / rodadas automáticas
+## Cron / rodadas automaticas
 
-Ainda pendente. Quando implementado, usar `pg_cron` + `pg_net` para chamar
-uma rota `/api/public/hooks/*` no servidor TanStack:
+O processamento usa um unico job por minuto:
 
-- 21:55 America/Belem: `lock-lineups` (marca `rounds.lineup_lock_at` cumprido).
-- 22:00 America/Belem: `run-round` (simula todas as partidas da rodada e gera
-  `match_events`; `reveal_at` nao libera eventos de jogos alheios).
-- 22:10 America/Belem: `finalize-round` (credita prêmios, marca `is_processed`).
+```sql
+SELECT public.process_due_rounds(now());
+```
+
+A migration `20260709170000_operational_automation.sql` tenta registrar
+`bagrefut-process-due-rounds` via `pg_cron`. Se `pg_cron` nao estiver
+disponivel, configure um scheduler externo para chamar:
+
+```http
+POST /api/internal/jobs/process-due-rounds
+Authorization: Bearer <INTERNAL_JOB_SECRET>
+```
+
+Nao criar tres crons fixos para 21:55, 22:00 e 22:10; esses horarios vivem em
+`rounds.lineup_lock_at`, `rounds.starts_at` e `rounds.ends_at`.
 
 ## Segurança
 

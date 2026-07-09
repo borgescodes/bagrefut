@@ -105,7 +105,11 @@ Média ponderada por posição. Pesos somam 100:
 
 - **21:55**: fechamento automático de escalações (`rounds.lineup_lock_at`).
 - **22:00**: início da rodada (`rounds.starts_at`).
-- **22:10**: rodada finalizada (`rounds.ends_at`), prêmios creditados.
+- **22:10**: rodada finalizada (`rounds.ends_at`).
+- O processador usa os timestamps persistidos em cada rodada. Nao ha horario
+  hardcoded no cron; atraso do servidor executa etapas vencidas em ordem.
+- `rounds.lineups_locked_at`, `rounds.simulation_started_at` e
+  `rounds.finalized_at` registram a execucao operacional de cada etapa.
 
 ## Setores (19 únicos)
 
@@ -160,8 +164,15 @@ Média ponderada por posição. Pesos somam 100:
 - Premios de partida usam `match_reward_config`: vitoria `75`, empate `25`,
   derrota `0` cents por padrao. Credito passa por `_credit_wallet`; premios
   zero tambem geram ledger.
-- `simulate_match` e `simulate_round` sao RPCs admin-only, idempotentes, sem
-  cron e sem processamento automatico por horario.
+- `simulate_match` e `simulate_round` sao RPCs admin-only e idempotentes para
+  operacao manual. O cron chama `process_due_rounds(now())` com service role.
+- Em `starts_at`, a rodada simula partidas e credita `match_reward`, mas nao
+  marca `rounds.is_processed`.
+- Em `ends_at`, `round_finalize` exige exatamente 3 partidas `finished`, marca
+  `rounds.is_processed = true` e preenche `rounds.finalized_at`.
+- A ultima rodada finalizada dispara encerramento da temporada quando existem
+  10 rodadas e 30 partidas `finished`; `season_prize` continua sendo creditado
+  uma unica vez por clube.
 - Teste estatistico TypeScript roda 2.000 seeds fixas por cenario. Faixas:
   times iguais com diferenca de vitorias menor que `8%`, time superior vence
   entre `50%` e `90%`, empates acima de `8%`, media de gols entre `1.8` e `4.8`,

@@ -33,7 +33,18 @@ jobs:
           script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
           Path('/tmp/harden.py').write_text(script)
           PY
-          python3 /tmp/harden.py
+          if ! python3 /tmp/harden.py > /tmp/harden.log 2>&1; then
+            cat /tmp/harden.log
+            cp /tmp/harden.log harden-error.log
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add harden-error.log
+            git commit -m "chore: registrar erro do hardening"
+            git push origin HEAD:fix/operational-automation-hardening
+            exit 1
+          fi
+          rm -f harden-error.log
+          rm -f .github/workflows/harden-operational-automation.yml
           rm -f .github/workflows/run-hardening-on-pr.yml
       - name: Run checks
         run: |

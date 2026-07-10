@@ -2,45 +2,85 @@
 
 ## Visão geral
 
-A rota autenticada `/mercado` reúne quatro áreas: estoque do sistema, elenco e
-treino, anúncios P2P e ofertas de troca. O frontend usa React Query e server
-functions autenticadas; as regras críticas permanecem em RPCs Postgres
-`SECURITY DEFINER`.
+A rota autenticada `/mercado` reúne quatro áreas:
 
-## Mercado do sistema
+1. `Meu elenco`: cartas do próprio clube, treino e venda ao sistema.
+2. `Sistema`: vitrine formada somente por cartas vendidas por clubes.
+3. `P2P`: anúncios de preço fixo entre clubes.
+4. `Trocas`: ofertas diretas com cartas e dinheiro.
 
-- A carta é permanente. Compra e venda alteram somente
-  `club_players.club_id`; a linha nunca é deletada/recriada.
-- `club_id IS NULL` representa posse do sistema e exige uma linha correspondente
-  em `system_market_stock`.
-- O sistema vende por 100% de `players.reference_value_cents`.
-- O sistema compra por `floor(reference_value_cents / 2)`, ou 50%.
-- Compra exige saldo suficiente e elenco abaixo de 15 cartas.
+Frontend usa React Query e server functions autenticadas. Regras críticas ficam nas RPCs
+Postgres `SECURITY DEFINER`.
+
+## Contrato econômico
+
+- Catálogo fechado: 60 jogadores únicos.
+- Seis clubes recebem 10 cartas cada no pacote inicial.
+- Elenco mínimo: 5 cartas.
+- Elenco máximo: 10 cartas.
+- Saldo máximo do clube: 99.999 cents (`R$ 999,99`).
+- Preço máximo por carta: 10.000 cents (`R$ 100,00`).
+- Dinheiro máximo por anúncio/oferta: 10.000 cents (`R$ 100,00`).
+
+## Pool inicial e vitrine do sistema
+
+`system_market_stock` possui dois estados:
+
+- `is_market_eligible = false`: pool reservado aos pacotes iniciais; não aparece na UI e
+  não pode ser comprado.
+- `is_market_eligible = true`: carta vendida por um clube; aparece na vitrine e pode ser
+  comprada.
+
+A vitrine começa vazia. Não existe estoque comercial inicial.
+
+Abrir pacote consome apenas cartas com `is_market_eligible = false`. Comprar do sistema
+consome apenas cartas com `is_market_eligible = true`.
+
+## Compra e venda ao sistema
+
+A carta é permanente. Compra e venda alteram somente `club_players.club_id`; a linha não
+é deletada/recriada.
+
+- Sistema compra do clube por `floor(reference_value_cents / 2)`, ou 50%.
+- Sistema vende ao clube por 100% de `players.reference_value_cents`.
+- Compra exige saldo suficiente e elenco abaixo de 10 cartas.
 - Venda exige que o clube permaneça com pelo menos 5 cartas.
-- Toda alteração de saldo passa por `_debit_wallet` ou `_credit_wallet` e cria
+- Venda é bloqueada se o crédito ultrapassar `R$ 999,99`.
+- Toda mutação de saldo passa por `_debit_wallet` ou `_credit_wallet` e grava
   `wallet_transactions` na mesma transação.
+
+## Posse e ações
+
+`Meu elenco` consulta somente cartas acessíveis ao clube autenticado por RLS.
+
+Usuário pode treinar, vender, anunciar ou oferecer somente carta própria. Carta de outro
+clube aparece apenas:
+
+- em anúncio P2P, para compra;
+- na criação de troca, como carta solicitada.
+
+RPCs revalidam `auth.uid()`, profile `approved`, propriedade, reservas, saldo e limites.
+Nenhum `club_id` recebido do client é autoridade de posse.
 
 ## Treino
 
 - Um treino por clube por dia em `America/Belem`.
 - Custos: peba 25 cents, paia 75 cents e pika 150 cents.
-- Atributos válidos: `velocity`, `finishing`, `passing`, `dribbling`,
-  `defending`, `physical` e `goalkeeping`.
-- O progresso por carta/atributo é `0 -> 1 -> 2 -> 0`; ao fechar o ciclo o
-  atributo recebe `+1` e OVR/preço são recalculados.
+- Atributos válidos: `velocity`, `finishing`, `passing`, `dribbling`, `defending`,
+  `physical` e `goalkeeping`.
+- Progresso por carta/atributo: `0 -> 1 -> 2 -> 0`.
+- Ao fechar ciclo, atributo recebe `+1`; OVR e valor de referência são recalculados.
 - Carta reservada não pode ser treinada.
 
 ## Anúncios P2P
 
-- `create_market_listing` aceita preço de 1 a 10.000 cents, valida propriedade,
-  reserva, anúncios/ofertas concorrentes e o mínimo de 5 cartas.
-- Criar o anúncio e marcar `club_players.is_reserved = true` acontece na mesma
-  transação.
-- `cancel_market_listing` é idempotente para anúncio já cancelado e libera a
-  carta. Anúncio vendido não pode ser cancelado.
-- `buy_market_listing` bloqueia anúncio, carta e clubes, revalida saldo e
-  elencos, debita o comprador como `market_purchase`, credita o vendedor como
-  `market_sale`, transfere a mesma carta e fecha o anúncio como `sold`.
+- Preço permitido: 1 a 10.000 cents.
+- Criar anúncio reserva a carta na mesma transação.
+- Cancelar anúncio libera a carta.
+- Comprar transfere carta e saldo atomicamente.
+- Comprador precisa terminar com no máximo 10 cartas.
+- Vendedor precisa terminar com no mínimo 5 cartas.
+- Vendedor não pode receber crédito que ultrapasse `R$ 999,99`.
 - Reexecução não duplica saldo, ledger ou transferência.
 
 ## Ofertas de troca
@@ -53,62 +93,49 @@ Semântica:
 - `side = 'to'`: cartas solicitadas ao destinatário.
 - `cash_cents`: dinheiro pago por `from_club` para `to_club`.
 
-Cada lado aceita no máximo 5 cartas, sem duplicação. A oferta precisa conter ao
-menos uma carta ou dinheiro, deve expirar no futuro e projetar os dois elencos
-entre 5 e 15 cartas. Todas as cartas ficam reservadas enquanto o status é
-`pending`.
+Cada lado aceita no máximo 5 cartas. Oferta precisa conter carta ou dinheiro, expirar no
+futuro e projetar ambos os elencos entre 5 e 10 cartas. Dinheiro máximo: `R$ 100,00`.
 
-Aceitar bloqueia oferta, clubes em ordem estável e cartas em ordem UUID. O banco
-revalida expiração, propriedade, reserva, saldo e limites antes de transferir
-todas as cartas. `cash_cents` usa dois lançamentos `transfer_cash` com
-`reference_table = 'transfer_offers'` e o mesmo `reference_id`. Qualquer falha
+Todas as cartas ficam reservadas enquanto status é `pending`. Aceite transfere tudo ou
 reverte tudo; não existe transferência parcial.
-
-Aceite, rejeição e cancelamento são idempotentes para o próprio estado final.
-`_expire_transfer_offers(now)` muda ofertas vencidas para `expired` e libera as
-cartas. O core é executável somente por `postgres`/`service_role` e é chamado
-antes das operações públicas que dependem de expiração. Esta migration não cria
-novo cron.
 
 ## Reserva de carta
 
-`club_players.is_reserved = true` bloqueia venda ao sistema, treino, escalação
-manual, escalação automática, novo anúncio, nova oferta e uso simultâneo em
-outra negociação. A reserva é criada e liberada dentro da mesma transação que
-altera o anúncio ou a oferta.
+`club_players.is_reserved = true` bloqueia:
 
-## Segurança e concorrência
+- venda ao sistema;
+- treino;
+- escalação;
+- novo anúncio;
+- nova oferta;
+- uso simultâneo em outra negociação.
 
-- RPCs públicas validam `auth.uid()`, profile `approved` e clube por `owner_id`;
-  nenhum `club_id` do client é usado como autoridade de posse.
-- Todas usam `SECURITY DEFINER`, `SET search_path = ''`, referências qualificadas,
-  revoke de `PUBLIC`/`anon` e grant somente para `authenticated`.
-- Client não escreve diretamente em `market_listings`, `transfer_offers`,
-  `transfer_offer_items`, `club_players`, `clubs.balance_cents` ou
-  `wallet_transactions`.
-- `FOR UPDATE`, ordem estável de locks, índices únicos, revalidação no momento da
-  execução e estados idempotentes protegem compras/aceites concorrentes.
+Reserva é criada/liberada dentro da mesma transação que altera anúncio ou oferta.
 
-## Aplicação manual
+## UI
 
-1. Faça backup e confirme o ambiente alvo.
-2. Aplique `supabase/migrations/20260710120000_usable_market.sql` pelo fluxo de
-   migrations do Lovable/Supabase.
-3. Em ambiente de teste, execute
-   `supabase/tests/database/usable_market.sql` integralmente. O resultado esperado
-   termina com `NOTICE: usable_market contract test passed` e `ROLLBACK`.
-4. Não execute o teste SQL em um console que remova o `BEGIN`/`ROLLBACK`.
+Cartas usam o componente compartilhado `PlayerCard`.
 
-## Regeneração dos tipos Supabase
+- imagem: `/players/<players.id>.webp`;
+- nome: `players.name`;
+- setor: formatado somente para display;
+- fallback visual usa identificador derivado da posição e UUID;
+- controles de treino/venda aparecem somente em `Meu elenco`;
+- vitrine vazia explica que estoque nasce das vendas dos clubes.
 
-Os RPCs desta migration usam um helper tipado e Zod até os tipos gerados serem
-atualizados. Depois de aplicar a migration, regenere o arquivo sem editar as
-assinaturas manualmente:
+## Migrations e testes
 
-```powershell
-supabase gen types typescript --project-id <PROJECT_ID> --schema public |
-  Set-Content -Encoding utf8 src/integrations/supabase/types.ts
+Contrato fechado:
+
+- `supabase/migrations/20260710190000_closed_market_economy.sql`;
+- `supabase/migrations/20260710191000_fix_closed_market_ambiguity.sql`;
+- `supabase/tests/database/closed_market_economy.sql`.
+
+Teste SQL deve terminar com:
+
+```text
+NOTICE: closed_market_economy contract test passed
+ROLLBACK
 ```
 
-Em ambiente local já iniciado, use `--local` no lugar de `--project-id`. Depois,
-rode `bun run check` e revise o diff de `src/integrations/supabase/types.ts`.
+Não executar teste em console que remova `BEGIN`/`ROLLBACK`.

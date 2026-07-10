@@ -35,6 +35,12 @@ DECLARE
   _count integer;
   _reward_count integer;
   _prize_count integer;
+  _audit_before integer;
+  _audit_after integer;
+  _match_id uuid;
+  _player_id uuid;
+  _card_id uuid;
+  _definition text;
   _i integer;
   _slot integer;
 BEGIN
@@ -47,6 +53,37 @@ BEGIN
   ORDER BY sort_order, code
   LIMIT 1;
   IF _badge_id IS NULL THEN RAISE EXCEPTION 'test_setup_failed: badge_missing'; END IF;
+
+  IF pg_catalog.to_regclass('public.operational_job_runs') IS NULL
+     OR pg_catalog.to_regprocedure('public.process_due_rounds(timestamptz)') IS NULL THEN
+    RAISE EXCEPTION 'assertion_failed: operational DB layer missing without dependency on pg_cron';
+  END IF;
+
+  SELECT pg_catalog.pg_get_functiondef('public._match_simulate_internal(uuid)'::regprocedure)
+  INTO _definition;
+  IF _definition LIKE '%auth.uid(%'
+     OR _definition LIKE '%_assert_approved_admin%'
+     OR _definition LIKE '%admin_audit_logs%'
+     OR _definition LIKE '%SET is_processed = true%' THEN
+    RAISE EXCEPTION 'assertion_failed: match core contains auth, audit, or round-finalize logic';
+  END IF;
+
+  SELECT pg_catalog.pg_get_functiondef('public._round_simulate_internal(uuid)'::regprocedure)
+  INTO _definition;
+  IF _definition LIKE '%auth.uid(%'
+     OR _definition LIKE '%_assert_approved_admin%'
+     OR _definition LIKE '%admin_audit_logs%'
+     OR _definition LIKE '%SET is_processed = true%' THEN
+    RAISE EXCEPTION 'assertion_failed: round core contains auth, audit, or round-finalize logic';
+  END IF;
+
+  SELECT pg_catalog.pg_get_functiondef('public._season_finish_internal(uuid)'::regprocedure)
+  INTO _definition;
+  IF _definition LIKE '%auth.uid(%'
+     OR _definition LIKE '%_assert_approved_admin%'
+     OR _definition LIKE '%admin_audit_logs%' THEN
+    RAISE EXCEPTION 'assertion_failed: season core contains auth or audit logic';
+  END IF;
 
   CREATE TEMP TABLE pg_temp.oa_pairs(
     round_number integer NOT NULL,
@@ -150,6 +187,8 @@ BEGIN
   END LOOP;
 
   UPDATE public.profiles SET status = 'approved'::public.user_status WHERE id = ANY(_users);
+  INSERT INTO public.user_roles(user_id, role)
+  VALUES (_users[1], 'admin'::public.app_role);
 
   INSERT INTO public.seasons(id, league_id, season_number, status, started_at, name)
   VALUES (_season_id, _league_id, 9701, 'active', _base, 'Operational Automation SQL');
@@ -215,14 +254,14 @@ BEGIN
         'BFOA-' || _i::text || '-' || _slot::text,
         'Operational Player ' || _i::text || ' ' || _slot::text,
         (ARRAY[
-          'GOL'::public.player_position,
+          'GK'::public.player_position,
           'DEF'::public.player_position,
           'MID'::public.player_position,
           'ATA'::public.player_position,
           'DEF'::public.player_position
         ])[_slot],
-        'common'::public.player_rarity,
-        'base'::public.player_sector,
+        'paia'::public.player_rarity,
+        'centro'::public.player_sector,
         70,
         70,
         70,
@@ -233,10 +272,20 @@ BEGIN
         70,
         100
       )
-      RETURNING id INTO _round_id;
+      RETURNING id INTO _player_id;
 
-      INSERT INTO public.club_players(club_id, player_id, is_reserved)
-      VALUES (_clubs[_i], _round_id, false);
+      SELECT id INTO _card_id
+      FROM public.club_players
+      WHERE player_id = _player_id
+      FOR UPDATE;
+
+      DELETE FROM public.system_market_stock
+      WHERE club_player_id = _card_id;
+
+      UPDATE public.club_players
+      SET club_id = _clubs[_i],
+is_reserved = false
+      WHERE id = _card_id;
     END LOOP;
   END LOOP;
 
@@ -306,6 +355,29 @@ BEGIN
     AND wt.reference_table = 'matches';
   IF _count <> _reward_count THEN
     RAISE EXCEPTION 'assertion_failed: repeated simulation duplicated match rewards';
+  END IF;
+
+  SELECT id INTO _match_id
+  FROM public.matches
+  WHERE round_id = _round_ids[1]
+  ORDER BY id
+  LIMIT 1;
+
+  SELECT pg_catalog.count(*) INTO _audit_before
+  FROM public.admin_audit_logs
+  WHERE action = 'simulate_match'
+    AND target_id = _match_id;
+
+  PERFORM pg_catalog.set_config('request.jwt.claim.sub', _users[1]::text, true);
+  PERFORM public.simulate_match(_match_id);
+
+  SELECT pg_catalog.count(*) INTO _audit_after
+  FROM public.admin_audit_logs
+  WHERE action = 'simulate_match'
+    AND target_id = _match_id;
+
+  IF _audit_after <> _audit_before + 1 THEN
+    RAISE EXCEPTION 'assertion_failed: public wrapper must create exactly one audit log';
   END IF;
 
   IF (SELECT is_processed FROM public.rounds WHERE id = _round_ids[1]) THEN
@@ -406,10 +478,18 @@ BEGIN
   SET is_reserved = false
   WHERE club_id = ANY(_clubs);
 
-  UPDATE public.operational_job_runs
-  SET status = 'pending',
-      next_retry_at = NULL
+  SELECT public._operational_retry_job_run(_job.id) INTO _result;
+  SELECT * INTO _job
+  FROM public.operational_job_runs
   WHERE id = _job.id;
+
+  IF _job.status <> 'pending'
+     OR _job.next_retry_at IS NULL
+     OR _job.attempt_count <> 5
+     OR coalesce((_job.result->>'manual_retry_count')::integer, 0) <> 1
+     OR jsonb_array_length(coalesce(_job.result->'manual_retries', '[]'::jsonb)) <> 1 THEN
+    RAISE EXCEPTION 'assertion_failed: manual retry did not preserve history or schedule immediate retry';
+  END IF;
 
   SELECT public.process_due_rounds(_base + interval '20 days') INTO _result;
   IF (_result->>'seasons_finished')::integer <> 1 THEN

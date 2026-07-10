@@ -31,21 +31,55 @@ jobs:
           end = source.index("\n          PY\n", start)
           lines = source[start:end].splitlines()
           script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+
+          old = '''operational = replace_once(
+    operational,
+    """        result = jsonb_build_object(
+          'error', SQLERRM,
+          'attempt_count', _attempt
+        )""",
+    """        result = coalesce(result, '{}'::jsonb) || jsonb_build_object(
+          'last_failure', jsonb_build_object(
+            'error', SQLERRM,
+            'attempt_count', _attempt,
+            'failed_at', pg_catalog.now()
+          ),
+          'attempt_count', _attempt
+        )""",
+    'preserve failure history'
+)
+'''
+          new = '''failure_pattern = re.compile(
+    r"result\\s*=\\s*jsonb_build_object\\(\\s*'error',\\s*SQLERRM,\\s*'attempt_count',\\s*_attempt\\s*\\)",
+    re.MULTILINE,
+)
+operational, failure_count = failure_pattern.subn(
+    """result = coalesce(result, '{}'::jsonb) || jsonb_build_object(
+          'last_failure', jsonb_build_object(
+            'error', SQLERRM,
+            'attempt_count', _attempt,
+            'failed_at', pg_catalog.now()
+          ),
+          'attempt_count', _attempt
+        )""",
+    operational,
+    count=1,
+)
+if failure_count != 1:
+    raise RuntimeError(f'preserve failure history: expected one occurrence, found {failure_count}')
+'''
+          if old not in script:
+              raise RuntimeError('generator failure-history block not found')
+          script = script.replace(old, new, 1)
           Path('/tmp/harden.py').write_text(script)
           PY
           if ! python3 /tmp/harden.py > /tmp/harden.log 2>&1; then
             cat /tmp/harden.log
-            cp /tmp/harden.log harden-error.log
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add harden-error.log
-            git commit -m "chore: registrar erro do hardening"
-            git push origin HEAD:fix/operational-automation-hardening
             exit 1
           fi
-          rm -f harden-error.log
           rm -f .github/workflows/harden-operational-automation.yml
           rm -f .github/workflows/run-hardening-on-pr.yml
+          rm -f .github/workflows/debug-hardening.yml
       - name: Run checks
         run: |
           bun install --frozen-lockfile

@@ -14,8 +14,8 @@ const MARKET_ERROR_MESSAGES: Record<string, string> = {
   insufficient_balance_or_club_missing: "Saldo insuficiente para concluir a operacao.",
   roster_minimum: "O clube precisa permanecer com pelo menos 5 cartas.",
   roster_minimum_reached: "O clube precisa permanecer com pelo menos 5 cartas.",
-  roster_maximum: "O clube pode ter no maximo 15 cartas.",
-  roster_maximum_reached: "O clube pode ter no maximo 15 cartas.",
+  roster_maximum: "O clube pode ter no maximo 10 cartas.",
+  roster_maximum_reached: "O clube pode ter no maximo 10 cartas.",
   offer_not_found: "A oferta nao foi encontrada.",
   offer_not_pending: "Esta oferta nao esta mais pendente.",
   offer_expired: "Esta oferta expirou.",
@@ -28,8 +28,8 @@ const MARKET_ERROR_MESSAGES: Record<string, string> = {
   training_already_done_today: "Seu clube ja treinou hoje. Tente novamente amanha.",
   attribute_invalid: "Escolha um atributo valido para o treino.",
   attribute_maxed: "Este atributo ja atingiu o nivel maximo.",
-  wallet_balance_cap_exceeded: "A operacao ultrapassaria o saldo maximo de R$ 100,00.",
-  player_not_in_system_stock: "Esta carta nao esta mais disponivel no sistema.",
+  wallet_balance_cap_exceeded: "A operacao ultrapassaria o saldo maximo de R$ 999,99.",
+  player_not_in_system_stock: "Esta carta nao esta mais disponivel na vitrine do sistema.",
 };
 
 export function mapMarketErrorMessage(error: unknown): string {

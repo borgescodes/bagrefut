@@ -21,62 +21,63 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Extract and run hardening generator
+      - name: Extract and patch hardening generator
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          source = Path('.github/workflows/harden-operational-automation.yml').read_text()
-          start = source.index("          python3 <<'PY'\n") + len("          python3 <<'PY'\n")
-          end = source.index("\n          PY\n", start)
-          lines = source[start:end].splitlines()
-          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
 
-          old = '''operational = replace_once(
-    operational,
-    """        result = jsonb_build_object(
-          'error', SQLERRM,
-          'attempt_count', _attempt
-        )""",
-    """        result = coalesce(result, '{}'::jsonb) || jsonb_build_object(
-          'last_failure', jsonb_build_object(
-            'error', SQLERRM,
-            'attempt_count', _attempt,
-            'failed_at', pg_catalog.now()
-          ),
-          'attempt_count', _attempt
-        )""",
-    'preserve failure history'
-)
-'''
-          new = '''failure_pattern = re.compile(
-    r"result\\s*=\\s*jsonb_build_object\\(\\s*'error',\\s*SQLERRM,\\s*'attempt_count',\\s*_attempt\\s*\\)",
-    re.MULTILINE,
-)
-operational, failure_count = failure_pattern.subn(
-    """result = coalesce(result, '{}'::jsonb) || jsonb_build_object(
-          'last_failure', jsonb_build_object(
-            'error', SQLERRM,
-            'attempt_count', _attempt,
-            'failed_at', pg_catalog.now()
-          ),
-          'attempt_count', _attempt
-        )""",
-    operational,
-    count=1,
-)
-if failure_count != 1:
-    raise RuntimeError(f'preserve failure history: expected one occurrence, found {failure_count}')
-'''
-          if old not in script:
-              raise RuntimeError('generator failure-history block not found')
-          script = script.replace(old, new, 1)
-          Path('/tmp/harden.py').write_text(script)
+          source = Path('.github/workflows/harden-operational-automation.yml').read_text()
+          marker = "          python3 <<'PY'\n"
+          start = source.index(marker) + len(marker)
+          end = source.index("\n          PY\n", start)
+          source_lines = source[start:end].splitlines()
+          script = '\n'.join(
+              line[10:] if line.startswith('          ') else line
+              for line in source_lines
+          ) + '\n'
+
+          lines = script.splitlines()
+          label_index = next(
+              index
+              for index, line in enumerate(lines)
+              if "'preserve failure history'" in line
+          )
+          block_start = label_index
+          while block_start >= 0 and 'operational = replace_once(' not in lines[block_start]:
+              block_start -= 1
+          block_end = label_index
+          while block_end < len(lines) and lines[block_end].strip() != ')':
+              block_end += 1
+          if block_start < 0 or block_end >= len(lines):
+              raise RuntimeError('failure-history generator block not found')
+
+          replacement = [
+              "failure_pattern = re.compile(",
+              "    r\"result\\s*=\\s*jsonb_build_object\\(\\s*'error',\\s*SQLERRM,\\s*'attempt_count',\\s*_attempt\\s*\\)\",",
+              "    re.MULTILINE,",
+              ")",
+              "operational, failure_count = failure_pattern.subn(",
+              "    \"\"\"result = coalesce(result, '{}'::jsonb) || jsonb_build_object(",
+              "          'last_failure', jsonb_build_object(",
+              "            'error', SQLERRM,",
+              "            'attempt_count', _attempt,",
+              "            'failed_at', pg_catalog.now()",
+              "          ),",
+              "          'attempt_count', _attempt",
+              "        )\"\"\",",
+              "    operational,",
+              "    count=1,",
+              ")",
+              "if failure_count != 1:",
+              "    raise RuntimeError(",
+              "        f'preserve failure history: expected one occurrence, found {failure_count}'",
+              "    )",
+          ]
+          lines[block_start:block_end + 1] = replacement
+          Path('/tmp/harden.py').write_text('\n'.join(lines) + '\n')
           PY
-          if ! python3 /tmp/harden.py > /tmp/harden.log 2>&1; then
-            cat /tmp/harden.log
-            exit 1
-          fi
+          python3 /tmp/harden.py
           rm -f .github/workflows/harden-operational-automation.yml
           rm -f .github/workflows/run-hardening-on-pr.yml
           rm -f .github/workflows/debug-hardening.yml

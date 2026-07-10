@@ -2,9 +2,10 @@
 
 ## Constantes financeiras
 
-- **Saldo máximo por clube**: R$ 100,00 (`clubs.balance_cents ≤ 10000`).
+- **Saldo máximo por clube**: R$ 999,99 (`clubs.balance_cents ≤ 99999`).
 - **Saldo nunca negativo** (`clubs.balance_cents ≥ 0`).
 - **Saldo inicial**: R$ 10,00 (1000 cents), creditado por `create_club` via `_credit_wallet`.
+- **Preço máximo por carta/anúncio/oferta**: R$ 100,00 (10.000 cents).
 - **Ledger `wallet_transactions`** grava toda mutação — imutável para o usuário.
 
 ## Bandas de raridade e preço de referência (cents)
@@ -25,15 +26,17 @@
   raridade e aplica teto global de R$ 100,00.
 - Sistema compra a **50%** do preço de referência.
 - Sistema vende a **100%** do preço de referência.
-- Elenco deve ficar entre **5 e 15 cartas**. Venda ao sistema é bloqueada com
-  5 cartas; compra do sistema é bloqueada com 15 cartas.
+- Elenco deve ficar entre **5 e 10 cartas**. Venda ao sistema é bloqueada com
+  5 cartas; compra do sistema é bloqueada com 10 cartas.
 
 ## Carta permanente e estoque do sistema
 
 - `club_players` é a instância única e permanente da carta.
 - `club_players.club_id IS NOT NULL`: carta pertence a um clube.
 - `club_players.club_id IS NULL`: carta pertence ao sistema.
-- `system_market_stock` lista explicitamente as cartas do sistema.
+- `system_market_stock.is_market_eligible = false`: carta reservada ao pool dos pacotes iniciais.
+- `system_market_stock.is_market_eligible = true`: carta vendida por clube e disponível na vitrine.
+- A vitrine comercial começa vazia; estoque nasce das vendas dos clubes.
 - A carta nunca é deletada/recriada em compra ou venda; a propriedade muda por
   `UPDATE club_players.club_id`.
 - Todo jogador tem exatamente uma carta por `club_players.player_id UNIQUE`.
@@ -71,8 +74,8 @@ Média ponderada por posição. Pesos somam 100:
   `market_sale`, ambos referenciando o mesmo `market_listings.id`.
 - Oferta aceita no máximo 5 cartas por lado. `cash_cents` é pago por `from_club`
   para `to_club` e usa `transfer_cash` no ledger dos dois clubes.
-- Anúncios e ofertas preservam elencos entre 5 e 15 cartas e saldo entre 0 e
-  10.000 cents.
+- Anúncios e ofertas preservam elencos entre 5 e 10 cartas e saldo entre 0 e
+  99.999 cents; preço/dinheiro por operação permanece limitado a 10.000 cents.
 - Cartas em anúncio ou oferta pendente usam `is_reserved = true` e não podem ser
   vendidas, treinadas, escaladas nem reutilizadas em outra negociação.
 - Aceite transfere todas as cartas e o dinheiro atomicamente; falha não deixa

@@ -8,6 +8,11 @@ import type {
 } from "@/domain/enums";
 import { centsToReal } from "@/domain/rules/validators";
 
+export const MIN_ROSTER_SIZE = 5;
+export const MAX_ROSTER_SIZE = 10;
+export const MAX_MARKET_PRICE_CENTS = 10_000;
+export const MAX_WALLET_CENTS = 99_999;
+
 export const MARKET_QUERY_KEYS = [
   "myClub",
   "myRoster",
@@ -23,7 +28,7 @@ export const playerSectorSchema = z.enum(PLAYER_SECTORS);
 export const playerAttributeSchema = z.enum(PLAYER_ATTRIBUTE_KEYS);
 
 const uuidSchema = z.string().uuid();
-const moneySchema = z.number().int().min(0).max(10_000);
+const transactionMoneySchema = z.number().int().min(0).max(MAX_MARKET_PRICE_CENTS);
 
 export const clubPlayerInputSchema = z.object({ clubPlayerId: uuidSchema });
 export const trainClubPlayerInputSchema = clubPlayerInputSchema.extend({
@@ -38,12 +43,12 @@ export const p2pMarketFiltersSchema = z.object({
   rarity: playerRaritySchema.nullish(),
   minOverall: z.number().int().min(1).max(99).nullish(),
   maxOverall: z.number().int().min(1).max(99).nullish(),
-  maxPriceCents: moneySchema.nullish(),
+  maxPriceCents: transactionMoneySchema.nullish(),
 });
 
 export const createListingInputSchema = z.object({
   clubPlayerId: uuidSchema,
-  priceCents: z.number().int().min(1).max(10_000),
+  priceCents: z.number().int().min(1).max(MAX_MARKET_PRICE_CENTS),
 });
 
 export const createTransferOfferInputSchema = z
@@ -51,7 +56,7 @@ export const createTransferOfferInputSchema = z
     toClubId: uuidSchema,
     fromClubPlayerIds: z.array(uuidSchema).max(5),
     toClubPlayerIds: z.array(uuidSchema).max(5),
-    cashCents: moneySchema,
+    cashCents: transactionMoneySchema,
     expiresAt: z.string().datetime(),
   })
   .superRefine((value, context) => {
@@ -208,6 +213,10 @@ export function projectBalanceAfter(balanceCents: number, debitCents: number): n
   return balanceCents - debitCents;
 }
 
+export function isRosterWithinLimits(size: number): boolean {
+  return size >= MIN_ROSTER_SIZE && size <= MAX_ROSTER_SIZE;
+}
+
 export function projectTradeRosters(input: {
   fromRosterSize: number;
   toRosterSize: number;
@@ -219,7 +228,7 @@ export function projectTradeRosters(input: {
   return {
     fromRosterSize,
     toRosterSize,
-    isValid: fromRosterSize >= 5 && fromRosterSize <= 15 && toRosterSize >= 5 && toRosterSize <= 15,
+    isValid: isRosterWithinLimits(fromRosterSize) && isRosterWithinLimits(toRosterSize),
   };
 }
 

@@ -1,12 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   MARKET_QUERY_KEYS,
+  MAX_MARKET_PRICE_CENTS,
+  MAX_ROSTER_SIZE,
+  MAX_WALLET_CENTS,
+  MIN_ROSTER_SIZE,
   canSubmitMarketAction,
   createListingInputSchema,
   createTransferOfferInputSchema,
   filterAndSortMarketCards,
   formatMarketPrice,
   invalidateMarketQueries,
+  isRosterWithinLimits,
   projectBalanceAfter,
   projectTradeRosters,
   type MarketCardSummary,
@@ -126,9 +131,16 @@ describe("market filters and sorting", () => {
   });
 });
 
-describe("market prices and projections", () => {
-  it("formats price in pt-BR using the shared cents contract", () => {
-    expect(formatMarketPrice(2_550)).toBe("R$ 25,50");
+describe("closed market limits", () => {
+  it("uses roster 5-10, transaction R$ 100 and wallet R$ 999,99", () => {
+    expect(MIN_ROSTER_SIZE).toBe(5);
+    expect(MAX_ROSTER_SIZE).toBe(10);
+    expect(MAX_MARKET_PRICE_CENTS).toBe(10_000);
+    expect(MAX_WALLET_CENTS).toBe(99_999);
+    expect(isRosterWithinLimits(5)).toBe(true);
+    expect(isRosterWithinLimits(10)).toBe(true);
+    expect(isRosterWithinLimits(4)).toBe(false);
+    expect(isRosterWithinLimits(11)).toBe(false);
   });
 
   it("projects balances without hiding an invalid negative result", () => {
@@ -136,20 +148,29 @@ describe("market prices and projections", () => {
     expect(projectBalanceAfter(500, 750)).toBe(-250);
   });
 
-  it("projects both rosters for a complete trade", () => {
+  it("accepts 1x1 and rejects any trade producing fewer than 5 or more than 10 cards", () => {
     expect(
       projectTradeRosters({
-        fromRosterSize: 8,
+        fromRosterSize: 10,
         toRosterSize: 10,
-        fromCards: 2,
+        fromCards: 1,
         toCards: 1,
       }),
-    ).toEqual({ fromRosterSize: 7, toRosterSize: 11, isValid: true });
+    ).toEqual({ fromRosterSize: 10, toRosterSize: 10, isValid: true });
+
+    expect(
+      projectTradeRosters({
+        fromRosterSize: 10,
+        toRosterSize: 10,
+        fromCards: 0,
+        toCards: 1,
+      }).isValid,
+    ).toBe(false);
 
     expect(
       projectTradeRosters({
         fromRosterSize: 5,
-        toRosterSize: 15,
+        toRosterSize: 10,
         fromCards: 1,
         toCards: 0,
       }).isValid,
@@ -157,18 +178,32 @@ describe("market prices and projections", () => {
   });
 });
 
-describe("market form validators", () => {
+describe("market prices and form validators", () => {
+  it("formats price in pt-BR using the shared cents contract", () => {
+    expect(formatMarketPrice(2_550)).toBe("R$ 25,50");
+    expect(formatMarketPrice(MAX_WALLET_CENTS)).toBe("R$ 999,99");
+  });
+
   it("accepts listing prices only from 1 to 10000 cents", () => {
     const id = "00000000-0000-0000-0000-000000000001";
     expect(createListingInputSchema.safeParse({ clubPlayerId: id, priceCents: 1 }).success).toBe(
       true,
     );
     expect(
-      createListingInputSchema.safeParse({ clubPlayerId: id, priceCents: 10_000 }).success,
+      createListingInputSchema.safeParse({
+        clubPlayerId: id,
+        priceCents: MAX_MARKET_PRICE_CENTS,
+      }).success,
     ).toBe(true);
     expect(createListingInputSchema.safeParse({ clubPlayerId: id, priceCents: 0 }).success).toBe(
       false,
     );
+    expect(
+      createListingInputSchema.safeParse({
+        clubPlayerId: id,
+        priceCents: MAX_MARKET_PRICE_CENTS + 1,
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects duplicate cards, more than five cards and empty offers", () => {
@@ -198,7 +233,16 @@ describe("market form validators", () => {
 });
 
 describe("market errors and mutation safety", () => {
-  it("maps every public contract code without exposing SQL internals", () => {
+  it("maps roster and wallet caps to current rules", () => {
+    expect(mapMarketErrorMessage(new Error("roster_maximum"))).toBe(
+      "O clube pode ter no maximo 10 cartas.",
+    );
+    expect(mapMarketErrorMessage(new Error("wallet_balance_cap_exceeded"))).toBe(
+      "A operacao ultrapassaria o saldo maximo de R$ 999,99.",
+    );
+  });
+
+  it("maps public contract codes without exposing SQL internals", () => {
     expect(mapMarketErrorMessage(new Error("player_reserved"))).toBe(
       "Esta carta esta reservada em outra negociacao.",
     );

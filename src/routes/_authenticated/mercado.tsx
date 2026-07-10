@@ -1,8 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { PlayerCard, type PlayerCardData } from "@/components/player-card";
 import {
+  MAX_MARKET_PRICE_CENTS,
+  MAX_ROSTER_SIZE,
+  MAX_WALLET_CENTS,
+  MIN_ROSTER_SIZE,
   canSubmitMarketAction,
   createListingInputSchema,
   createTransferOfferInputSchema,
@@ -14,7 +19,6 @@ import {
   type MarketCardSummary,
   type MarketFilters,
   type P2PMarketListing,
-  type PlayerAttributes,
   type RosterMarketCard,
   type SystemMarketCard,
   type TradeTarget,
@@ -56,7 +60,7 @@ export const Route = createFileRoute("/_authenticated/mercado")({
   component: MarketPage,
 });
 
-type MarketTab = "system" | "roster" | "p2p" | "offers";
+type MarketTab = "roster" | "system" | "p2p" | "offers";
 type OfferTab = "incoming" | "outgoing" | "create";
 
 const DEFAULT_FILTERS: MarketFilters = {
@@ -76,7 +80,7 @@ function MarketPage() {
   const listingsFn = useServerFn(listP2PMarket);
   const offersFn = useServerFn(listMyTransferOffers);
   const targetsFn = useServerFn(listTradeTargets);
-  const [tab, setTab] = useState<MarketTab>("system");
+  const [tab, setTab] = useState<MarketTab>("roster");
   const [filters, setFilters] = useState<MarketFilters>(DEFAULT_FILTERS);
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; text: string } | null>(
     null,
@@ -115,7 +119,7 @@ function MarketPage() {
   }
 
   if (workspace.isLoading) {
-    return <MarketShell loadingMessage="Carregando mercado e saldo..." />;
+    return <MarketShell loadingMessage="Carregando elenco, mercado e saldo..." />;
   }
   if (workspace.error) {
     return <MarketShell errorMessage={readableMarketError(workspace.error)} />;
@@ -141,11 +145,17 @@ function MarketPage() {
             {club.name} ({club.abbreviation})
           </p>
           <h1 className="mt-1 text-2xl font-bold">Mercado e treino</h1>
+          <p className="mt-2 text-sm text-slate-400">
+            Elenco {roster.length}/{MAX_ROSTER_SIZE} · mínimo {MIN_ROSTER_SIZE}
+          </p>
         </div>
         <div className="rounded-md border border-slate-700 px-4 py-3 text-right">
           <p className="text-xs uppercase tracking-wide text-slate-400">Saldo atual</p>
           <p className="mt-1 text-lg font-semibold tabular-nums">
             {formatMarketPrice(club.balance_cents)}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            limite {formatMarketPrice(MAX_WALLET_CENTS)}
           </p>
         </div>
       </header>
@@ -154,10 +164,10 @@ function MarketPage() {
         <div className="flex min-w-max gap-2 border-b border-slate-800 pb-2">
           {(
             [
-              ["system", "Sistema"],
               ["roster", "Meu elenco"],
+              ["system", "Sistema"],
               ["p2p", "P2P"],
-              ["offers", "Ofertas"],
+              ["offers", "Trocas"],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -166,11 +176,7 @@ function MarketPage() {
               role="tab"
               aria-selected={tab === value}
               onClick={() => setTab(value)}
-              className={`min-h-11 rounded-md px-4 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-100 ${
-                tab === value
-                  ? "bg-slate-100 text-slate-950"
-                  : "border border-slate-700 text-slate-200"
-              }`}
+              className={tab === value ? primaryButtonClass : secondaryButtonClass}
             >
               {label}
             </button>
@@ -192,6 +198,15 @@ function MarketPage() {
       )}
 
       <section className="mt-6" role="tabpanel">
+        {tab === "roster" && (
+          <RosterTab
+            cards={roster}
+            balanceCents={club.balance_cents}
+            refreshMarket={refreshMarket}
+            reportSuccess={reportSuccess}
+            reportError={reportError}
+          />
+        )}
         {tab === "system" && (
           <SystemTab
             cards={systemMarket}
@@ -199,15 +214,6 @@ function MarketPage() {
             balanceCents={club.balance_cents}
             filters={filters}
             setFilters={setFilters}
-            refreshMarket={refreshMarket}
-            reportSuccess={reportSuccess}
-            reportError={reportError}
-          />
-        )}
-        {tab === "roster" && (
-          <RosterTab
-            cards={roster}
-            balanceCents={club.balance_cents}
             refreshMarket={refreshMarket}
             reportSuccess={reportSuccess}
             reportError={reportError}
@@ -247,90 +253,6 @@ function MarketPage() {
   );
 }
 
-function SystemTab(props: {
-  cards: SystemMarketCard[];
-  rosterSize: number;
-  balanceCents: number;
-  filters: MarketFilters;
-  setFilters: (filters: MarketFilters) => void;
-  refreshMarket: () => Promise<void>;
-  reportSuccess: (text: string) => void;
-  reportError: (error: unknown) => void;
-}) {
-  const buyFn = useServerFn(buyPlayerFromSystem);
-  const [selected, setSelected] = useState<SystemMarketCard | null>(null);
-  const visibleCards = useMemo(
-    () => filterAndSortMarketCards(props.cards, props.filters),
-    [props.cards, props.filters],
-  );
-  const mutation = useMutation({
-    mutationFn: (card: SystemMarketCard) => buyFn({ data: { clubPlayerId: card.clubPlayerId } }),
-    onSuccess: async () => {
-      setSelected(null);
-      props.reportSuccess("Carta comprada do sistema com sucesso.");
-      await props.refreshMarket();
-    },
-    onError: props.reportError,
-  });
-
-  return (
-    <div>
-      <SectionHeading
-        title="Estoque do sistema"
-        description="Compra por 100% do valor de referência."
-      />
-      <MarketFilterPanel filters={props.filters} setFilters={props.setFilters} />
-      {props.cards.length === 0 ? (
-        <EmptyState text="Nenhuma carta disponível no sistema." />
-      ) : visibleCards.length === 0 ? (
-        <EmptyState text="Nenhuma carta atende aos filtros escolhidos." />
-      ) : (
-        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visibleCards.map((card) => {
-            const reason = !card.isAvailable
-              ? "Carta indisponível"
-              : props.rosterSize >= 15
-                ? "Elenco com 15 cartas"
-                : props.balanceCents < card.priceCents
-                  ? "Saldo insuficiente"
-                  : null;
-            return (
-              <PlayerMarketCard key={card.clubPlayerId} card={card} priceLabel="Preço de compra">
-                <button
-                  type="button"
-                  disabled={Boolean(reason) || mutation.isPending}
-                  onClick={() => setSelected(card)}
-                  className={primaryButtonClass}
-                >
-                  {mutation.isPending ? "Comprando..." : (reason ?? "Comprar")}
-                </button>
-              </PlayerMarketCard>
-            );
-          })}
-        </div>
-      )}
-
-      <ConfirmDialog
-        open={selected !== null}
-        title="Confirmar compra do sistema"
-        description={
-          selected
-            ? `${selected.name}: ${formatMarketPrice(selected.priceCents)}. Saldo atual ${formatMarketPrice(
-                props.balanceCents,
-              )}; após a compra ${formatMarketPrice(
-                projectBalanceAfter(props.balanceCents, selected.priceCents),
-              )}.`
-            : ""
-        }
-        pending={mutation.isPending}
-        confirmLabel="Confirmar compra"
-        onCancel={() => setSelected(null)}
-        onConfirm={() => selected && mutation.mutate(selected)}
-      />
-    </div>
-  );
-}
-
 function RosterTab(props: {
   cards: RosterMarketCard[];
   balanceCents: number;
@@ -346,15 +268,17 @@ function RosterTab(props: {
     attribute: PlayerAttributeKey;
   } | null>(null);
   const [attributes, setAttributes] = useState<Record<string, PlayerAttributeKey>>({});
+
   const sellMutation = useMutation({
     mutationFn: (card: RosterMarketCard) => sellFn({ data: { clubPlayerId: card.clubPlayerId } }),
     onSuccess: async () => {
       setSale(null);
-      props.reportSuccess("Carta vendida ao sistema com sucesso.");
+      props.reportSuccess("Carta vendida ao sistema e adicionada à vitrine.");
       await props.refreshMarket();
     },
     onError: props.reportError,
   });
+
   const trainMutation = useMutation({
     mutationFn: ({ card, attribute }: { card: RosterMarketCard; attribute: PlayerAttributeKey }) =>
       trainFn({ data: { clubPlayerId: card.clubPlayerId, attribute } }),
@@ -372,96 +296,89 @@ function RosterTab(props: {
     <div>
       <SectionHeading
         title="Meu elenco"
-        description="Venda ao sistema por 50% do valor de referência ou use o treino diário."
+        description="Somente suas cartas aparecem aqui. Treine ou venda ao sistema por 50% do valor de referência."
       />
-      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-3 rounded-md border border-slate-800 p-3 text-sm text-slate-400">
+        Você possui {props.cards.length} de {MAX_ROSTER_SIZE} cartas. Venda bloqueada ao atingir{" "}
+        {MIN_ROSTER_SIZE}.
+      </div>
+
+      <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {props.cards.map((card) => {
           const attribute = attributes[card.clubPlayerId] ?? firstValidAttribute(card);
           const progress =
             card.attributeProgress.find((item) => item.attribute === attribute)?.progress ?? 0;
           const currentValue = card.attributes[attribute];
+          const saleWouldExceedWallet =
+            props.balanceCents + card.systemSalePriceCents > MAX_WALLET_CENTS;
           const saleReason =
-            props.cards.length <= 5
-              ? "Mínimo de 5 cartas"
+            props.cards.length <= MIN_ROSTER_SIZE
+              ? `Mínimo de ${MIN_ROSTER_SIZE} cartas`
               : card.isReserved
                 ? "Carta reservada"
-                : null;
+                : saleWouldExceedWallet
+                  ? "Saldo máximo R$ 999,99"
+                  : null;
+
           return (
-            <PlayerMarketCard
+            <MarketCardFrame
               key={card.clubPlayerId}
               card={card}
               priceLabel="Venda ao sistema"
-              reserved={card.isReserved}
+              priceCents={card.systemSalePriceCents}
+              badge={card.isReserved ? "Carta reservada" : undefined}
             >
-              <div className="space-y-3 border-t border-slate-800 pt-3">
-                <label className="block text-sm">
-                  <span className="text-slate-300">Atributo para treino</span>
-                  <select
-                    value={attribute}
-                    disabled={card.isReserved || trainMutation.isPending}
-                    onChange={(event) =>
-                      setAttributes((current) => ({
-                        ...current,
-                        [card.clubPlayerId]: event.target.value as PlayerAttributeKey,
-                      }))
-                    }
-                    className={inputClass}
-                  >
-                    {validAttributes(card).map((key) => (
-                      <option key={key} value={key}>
-                        {attributeLabel(key)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <p className="text-xs text-slate-400">
-                  Atual: {currentValue}. Progresso: {progress}/3. Possível evolução: {currentValue}
-                  {progress === 2 && currentValue < 99
-                    ? ` → ${currentValue + 1}`
-                    : " (ainda acumula progresso)"}
-                  . Custo: {formatMarketPrice(card.trainingCostCents)}.
-                </p>
-                <div className="text-xs text-slate-400">
-                  <p className="font-medium text-slate-300">Progresso por atributo</p>
-                  <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
-                    {validAttributes(card).map((key) => (
-                      <li key={key} className="flex justify-between gap-2">
-                        <span>{attributeLabel(key)}</span>
-                        <span className="tabular-nums">
-                          {card.attributeProgress.find((item) => item.attribute === key)
-                            ?.progress ?? 0}
-                          /3
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    disabled={
-                      Boolean(saleReason) || sellMutation.isPending || trainMutation.isPending
-                    }
-                    onClick={() => setSale(card)}
-                    className={secondaryButtonClass}
-                  >
-                    {saleReason ?? "Vender ao sistema"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={card.isReserved || trainMutation.isPending || sellMutation.isPending}
-                    onClick={() => setTraining({ card, attribute })}
-                    className={primaryButtonClass}
-                  >
-                    {trainMutation.isPending
-                      ? "Treinando..."
-                      : card.isReserved
-                        ? "Reservada"
-                        : "Treinar"}
-                  </button>
-                </div>
+              <label className="block text-sm">
+                <span className="text-slate-300">Atributo para treino</span>
+                <select
+                  value={attribute}
+                  disabled={card.isReserved || trainMutation.isPending}
+                  onChange={(event) =>
+                    setAttributes((current) => ({
+                      ...current,
+                      [card.clubPlayerId]: event.target.value as PlayerAttributeKey,
+                    }))
+                  }
+                  className={inputClass}
+                >
+                  {validAttributes(card).map((key) => (
+                    <option key={key} value={key}>
+                      {attributeLabel(key)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <p className="text-xs text-slate-400">
+                {attributeLabel(attribute)}: {currentValue} · progresso {progress}/3 · custo{" "}
+                {formatMarketPrice(card.trainingCostCents)}
+              </p>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  disabled={
+                    Boolean(saleReason) || sellMutation.isPending || trainMutation.isPending
+                  }
+                  onClick={() => setSale(card)}
+                  className={secondaryButtonClass}
+                >
+                  {saleReason ?? "Vender"}
+                </button>
+                <button
+                  type="button"
+                  disabled={card.isReserved || trainMutation.isPending || sellMutation.isPending}
+                  onClick={() => setTraining({ card, attribute })}
+                  className={primaryButtonClass}
+                >
+                  {trainMutation.isPending
+                    ? "Treinando..."
+                    : card.isReserved
+                      ? "Reservada"
+                      : "Treinar"}
+                </button>
               </div>
-            </PlayerMarketCard>
+            </MarketCardFrame>
           );
         })}
       </div>
@@ -471,9 +388,11 @@ function RosterTab(props: {
         title="Confirmar venda ao sistema"
         description={
           sale
-            ? `Você receberá ${formatMarketPrice(sale.systemSalePriceCents)}. Saldo após a venda: ${formatMarketPrice(
-                props.balanceCents + sale.systemSalePriceCents,
-              )}. Esta carta sairá do seu elenco.`
+            ? `${sale.name}: você receberá ${formatMarketPrice(
+                sale.systemSalePriceCents,
+              )}. A carta sairá do clube e ficará disponível na vitrine do sistema por ${formatMarketPrice(
+                sale.referenceValueCents,
+              )}.`
             : ""
         }
         pending={sellMutation.isPending}
@@ -481,14 +400,15 @@ function RosterTab(props: {
         onCancel={() => setSale(null)}
         onConfirm={() => sale && sellMutation.mutate(sale)}
       />
+
       <ConfirmDialog
         open={training !== null}
         title="Confirmar treino"
         description={
           training
-            ? `${training.card.name}: ${attributeLabel(training.attribute)} por ${formatMarketPrice(
-                training.card.trainingCostCents,
-              )}. Saldo após o treino: ${formatMarketPrice(
+            ? `${training.card.name}: ${attributeLabel(
+                training.attribute,
+              )} por ${formatMarketPrice(training.card.trainingCostCents)}. Saldo após: ${formatMarketPrice(
                 projectBalanceAfter(props.balanceCents, training.card.trainingCostCents),
               )}.`
             : ""
@@ -497,6 +417,98 @@ function RosterTab(props: {
         confirmLabel="Confirmar treino"
         onCancel={() => setTraining(null)}
         onConfirm={() => training && trainMutation.mutate(training)}
+      />
+    </div>
+  );
+}
+
+function SystemTab(props: {
+  cards: SystemMarketCard[];
+  rosterSize: number;
+  balanceCents: number;
+  filters: MarketFilters;
+  setFilters: (filters: MarketFilters) => void;
+  refreshMarket: () => Promise<void>;
+  reportSuccess: (text: string) => void;
+  reportError: (error: unknown) => void;
+}) {
+  const buyFn = useServerFn(buyPlayerFromSystem);
+  const [selected, setSelected] = useState<SystemMarketCard | null>(null);
+  const visibleCards = useMemo(
+    () => filterAndSortMarketCards(props.cards, props.filters),
+    [props.cards, props.filters],
+  );
+
+  const mutation = useMutation({
+    mutationFn: (card: SystemMarketCard) => buyFn({ data: { clubPlayerId: card.clubPlayerId } }),
+    onSuccess: async () => {
+      setSelected(null);
+      props.reportSuccess("Carta comprada do sistema.");
+      await props.refreshMarket();
+    },
+    onError: props.reportError,
+  });
+
+  return (
+    <div>
+      <SectionHeading
+        title="Vitrine do sistema"
+        description="Começa vazia. Só exibe cartas vendidas por clubes; o sistema revende por 100% do valor de referência."
+      />
+      <MarketFilterPanel filters={props.filters} setFilters={props.setFilters} />
+
+      {props.cards.length === 0 ? (
+        <EmptyState text="Vitrine vazia. Uma carta aparecerá aqui quando algum clube vender ao sistema." />
+      ) : visibleCards.length === 0 ? (
+        <EmptyState text="Nenhuma carta da vitrine atende aos filtros." />
+      ) : (
+        <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          {visibleCards.map((card) => {
+            const reason = !card.isAvailable
+              ? "Carta indisponível"
+              : props.rosterSize >= MAX_ROSTER_SIZE
+                ? `Elenco com ${MAX_ROSTER_SIZE} cartas`
+                : props.balanceCents < card.priceCents
+                  ? "Saldo insuficiente"
+                  : null;
+
+            return (
+              <MarketCardFrame
+                key={card.clubPlayerId}
+                card={card}
+                priceLabel="Preço do sistema"
+                priceCents={card.priceCents}
+              >
+                <button
+                  type="button"
+                  disabled={Boolean(reason) || mutation.isPending}
+                  onClick={() => setSelected(card)}
+                  className={primaryButtonClass}
+                >
+                  {mutation.isPending ? "Comprando..." : (reason ?? "Comprar")}
+                </button>
+              </MarketCardFrame>
+            );
+          })}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={selected !== null}
+        title="Confirmar compra do sistema"
+        description={
+          selected
+            ? `${selected.name}: ${formatMarketPrice(
+                selected.priceCents,
+              )}. Elenco após: ${props.rosterSize + 1}/${MAX_ROSTER_SIZE}. Saldo após: ${formatMarketPrice(
+                projectBalanceAfter(props.balanceCents, selected.priceCents),
+              )}.`
+            : ""
+        }
+        pending={mutation.isPending}
+        confirmLabel="Confirmar compra"
+        onCancel={() => setSelected(null)}
+        onConfirm={() => selected && mutation.mutate(selected)}
       />
     </div>
   );
@@ -524,6 +536,7 @@ function P2PTab(props: {
     type: "buy" | "cancel";
     listing: P2PMarketListing;
   } | null>(null);
+
   const visibleListings = useMemo(
     () => filterAndSortMarketCards(props.listings, props.filters),
     [props.listings, props.filters],
@@ -542,11 +555,12 @@ function P2PTab(props: {
     onSuccess: async () => {
       setListingCardId("");
       setListingPrice("");
-      props.reportSuccess("Anúncio criado e carta reservada.");
+      props.reportSuccess("Anúncio criado. Carta reservada até venda ou cancelamento.");
       await props.refreshMarket();
     },
     onError: props.reportError,
   });
+
   const actionMutation = useMutation({
     mutationFn: async (selected: { type: "buy" | "cancel"; listing: P2PMarketListing }) => {
       if (selected.type === "cancel") {
@@ -556,9 +570,7 @@ function P2PTab(props: {
     },
     onSuccess: async (_result, selected) => {
       setAction(null);
-      props.reportSuccess(
-        selected.type === "buy" ? "Compra P2P concluída." : "Anúncio cancelado e carta liberada.",
-      );
+      props.reportSuccess(selected.type === "buy" ? "Compra P2P concluída." : "Anúncio cancelado.");
       await props.refreshMarket();
     },
     onError: props.reportError,
@@ -568,7 +580,7 @@ function P2PTab(props: {
     <div>
       <SectionHeading
         title="Mercado P2P"
-        description="Anúncios entre clubes com transferência atômica da carta e do saldo."
+        description="Anúncios de preço fixo entre clubes. Você só anuncia cartas do próprio elenco."
       />
 
       <form
@@ -578,7 +590,7 @@ function P2PTab(props: {
           if (
             canSubmitMarketAction({
               isPending: createMutation.isPending,
-              isValid: listingValidation.success,
+              isValid: listingValidation.success && props.rosterSize > MIN_ROSTER_SIZE,
             })
           ) {
             createMutation.mutate();
@@ -588,13 +600,13 @@ function P2PTab(props: {
         <h3 className="font-semibold">Criar anúncio</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto] md:items-end">
           <label className="text-sm">
-            <span className="text-slate-300">Carta elegível</span>
+            <span className="text-slate-300">Minha carta</span>
             <select
               value={listingCardId}
               onChange={(event) => setListingCardId(event.target.value)}
               className={inputClass}
             >
-              <option value="">Selecionar carta</option>
+              <option value="">Selecionar carta própria</option>
               {eligibleCards.map((card) => (
                 <option key={card.clubPlayerId} value={card.clubPlayerId}>
                   {card.name} · {card.position} · OVR {card.overall}
@@ -602,42 +614,40 @@ function P2PTab(props: {
               ))}
             </select>
           </label>
+
           <label className="text-sm">
             <span className="text-slate-300">Preço em centavos</span>
             <input
               type="number"
               min={1}
-              max={10_000}
+              max={MAX_MARKET_PRICE_CENTS}
               value={listingPrice}
               onChange={(event) => setListingPrice(event.target.value)}
               className={inputClass}
             />
           </label>
+
           <button
             type="submit"
             disabled={
-              props.rosterSize <= 5 ||
+              props.rosterSize <= MIN_ROSTER_SIZE ||
               !listingValidation.success ||
               createMutation.isPending ||
               eligibleCards.length === 0
             }
             className={primaryButtonClass}
           >
-            {createMutation.isPending ? "Criando..." : "Confirmar anúncio"}
+            {createMutation.isPending ? "Criando..." : "Anunciar"}
           </button>
         </div>
         <p className="mt-2 text-xs text-slate-400">
-          Preço permitido: 1 a 10.000 cents. A carta ficará reservada enquanto o anúncio estiver
-          aberto.
+          Preço: R$ 0,01 a R$ 100,00. O clube precisa permanecer com no mínimo {MIN_ROSTER_SIZE}{" "}
+          cartas.
         </p>
-        {props.rosterSize <= 5 && (
-          <p className="mt-2 text-sm text-amber-300">
-            Seu elenco precisa ficar com pelo menos 5 cartas.
-          </p>
-        )}
       </form>
 
       <MarketFilterPanel filters={props.filters} setFilters={props.setFilters} />
+
       {props.isLoading ? (
         <LoadingState text="Carregando anúncios P2P..." />
       ) : props.error ? (
@@ -647,20 +657,22 @@ function P2PTab(props: {
       ) : visibleListings.length === 0 ? (
         <EmptyState text="Nenhum anúncio atende aos filtros." />
       ) : (
-        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {visibleListings.map((listing) => {
             const buyReason = listing.isMine
               ? null
-              : props.rosterSize >= 15
-                ? "Elenco com 15 cartas"
+              : props.rosterSize >= MAX_ROSTER_SIZE
+                ? `Elenco com ${MAX_ROSTER_SIZE} cartas`
                 : props.balanceCents < listing.priceCents
                   ? "Saldo insuficiente"
                   : null;
+
             return (
-              <PlayerMarketCard
+              <MarketCardFrame
                 key={listing.listingId}
                 card={listing}
                 priceLabel="Preço P2P"
+                priceCents={listing.priceCents}
                 badge={listing.isMine ? "Meu anúncio" : undefined}
               >
                 <p className="text-sm text-slate-400">
@@ -678,7 +690,7 @@ function P2PTab(props: {
                       ? "Cancelar anúncio"
                       : (buyReason ?? "Comprar")}
                 </button>
-              </PlayerMarketCard>
+              </MarketCardFrame>
             );
           })}
         </div>
@@ -689,11 +701,11 @@ function P2PTab(props: {
         title={action?.type === "buy" ? "Confirmar compra P2P" : "Cancelar anúncio"}
         description={
           action?.type === "buy"
-            ? `${action.listing.name}: ${formatMarketPrice(action.listing.priceCents)}. Saldo após a compra: ${formatMarketPrice(
-                projectBalanceAfter(props.balanceCents, action.listing.priceCents),
-              )}.`
+            ? `${action.listing.name}: ${formatMarketPrice(
+                action.listing.priceCents,
+              )}. Elenco após: ${props.rosterSize + 1}/${MAX_ROSTER_SIZE}.`
             : action
-              ? `Cancelar o anúncio de ${action.listing.name}? A carta será liberada.`
+              ? `Cancelar anúncio de ${action.listing.name}? A carta voltará a ficar livre no seu elenco.`
               : ""
         }
         pending={actionMutation.isPending}
@@ -725,6 +737,7 @@ function OffersTab(props: {
     type: "accept" | "reject" | "cancel";
     offer: TransferOfferSummary;
   } | null>(null);
+
   const actionMutation = useMutation({
     mutationFn: async (selected: NonNullable<typeof action>) => {
       if (selected.type === "accept")
@@ -739,13 +752,14 @@ function OffersTab(props: {
         selected.type === "accept"
           ? "Oferta aceita e troca concluída."
           : selected.type === "reject"
-            ? "Oferta rejeitada e cartas liberadas."
-            : "Oferta cancelada e cartas liberadas.",
+            ? "Oferta rejeitada."
+            : "Oferta cancelada.",
       );
       await props.refreshMarket();
     },
     onError: props.reportError,
   });
+
   const visible = props.offers.filter((offer) =>
     tab === "incoming" ? offer.direction === "incoming" : offer.direction === "outgoing",
   );
@@ -753,9 +767,12 @@ function OffersTab(props: {
   return (
     <div>
       <SectionHeading
-        title="Ofertas de troca"
-        description="Cartas e dinheiro são transferidos juntos ou nada muda."
+        title="Trocas entre clubes"
+        description={`Trocas podem incluir cartas e até ${formatMarketPrice(
+          MAX_MARKET_PRICE_CENTS,
+        )}. Ambos os elencos devem terminar entre ${MIN_ROSTER_SIZE} e ${MAX_ROSTER_SIZE}.`}
       />
+
       <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="Tipos de oferta">
         {(
           [
@@ -821,7 +838,7 @@ function OffersTab(props: {
           action
             ? `${action.offer.fromClub.name} → ${action.offer.toClub.name}. Dinheiro: ${formatMarketPrice(
                 action.offer.cashCents,
-              )}. A operação é atômica.`
+              )}. A operação transfere tudo ou não altera nada.`
             : ""
         }
         pending={actionMutation.isPending}
@@ -849,12 +866,14 @@ function CreateOfferForm(props: {
   const [targetCards, setTargetCards] = useState<string[]>([]);
   const [cash, setCash] = useState("0");
   const expiresAt = useMemo(() => new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), []);
+
   const selectedTarget = props.targets.find((target) => target.clubId === targetId) ?? null;
   const targetRoster = useQuery({
     queryKey: ["tradeTargets", targetId],
     queryFn: () => targetRosterFn({ data: { clubId: targetId } }),
     enabled: Boolean(targetId),
   });
+
   const input = {
     toClubId: targetId,
     fromClubPlayerIds: ownCards,
@@ -873,6 +892,7 @@ function CreateOfferForm(props: {
     : null;
   const projectedBalance = projectBalanceAfter(props.balanceCents, Number(cash) || 0);
   const eligibleOwnCards = props.roster.filter((card) => !card.isReserved);
+
   const mutation = useMutation({
     mutationFn: () => {
       if (!validation.success || !projection?.isValid || projectedBalance < 0) {
@@ -885,11 +905,12 @@ function CreateOfferForm(props: {
       setOwnCards([]);
       setTargetCards([]);
       setCash("0");
-      props.reportSuccess("Oferta criada e todas as cartas foram reservadas.");
+      props.reportSuccess("Oferta criada. Cartas envolvidas ficaram reservadas.");
       await props.refreshMarket();
     },
     onError: props.reportError,
   });
+
   const canSubmit =
     validation.success &&
     Boolean(projection?.isValid) &&
@@ -920,7 +941,7 @@ function CreateOfferForm(props: {
           <option value="">Selecionar clube</option>
           {props.targets.map((target) => (
             <option key={target.clubId} value={target.clubId}>
-              {target.name} ({target.abbreviation}) · {target.rosterSize} cartas
+              {target.name} ({target.abbreviation}) · {target.rosterSize}/{MAX_ROSTER_SIZE}
             </option>
           ))}
         </select>
@@ -928,13 +949,13 @@ function CreateOfferForm(props: {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <CardSelection
-          title="Cartas que você oferece"
+          title="Minhas cartas oferecidas"
           cards={eligibleOwnCards}
           selected={ownCards}
           onToggle={(cardId) => setOwnCards(toggleCard(ownCards, cardId))}
         />
         <CardSelection
-          title="Cartas solicitadas"
+          title="Cartas solicitadas ao outro clube"
           cards={targetRoster.data ?? []}
           selected={targetCards}
           loading={targetRoster.isLoading}
@@ -944,11 +965,11 @@ function CreateOfferForm(props: {
       </div>
 
       <label className="block max-w-xs text-sm">
-        <span className="text-slate-300">Dinheiro pago ao destinatário (cents)</span>
+        <span className="text-slate-300">Dinheiro pago ao destinatário (centavos)</span>
         <input
           type="number"
           min={0}
-          max={10_000}
+          max={MAX_MARKET_PRICE_CENTS}
           value={cash}
           onChange={(event) => setCash(event.target.value)}
           className={inputClass}
@@ -957,26 +978,29 @@ function CreateOfferForm(props: {
 
       <div className="grid gap-3 rounded-md border border-slate-900 p-3 text-sm sm:grid-cols-3">
         <Info
-          label="Seu elenco após"
+          label="Meu elenco após"
           value={projection ? String(projection.fromRosterSize) : "-"}
         />
         <Info
-          label="Elenco destinatário"
+          label="Elenco destinatário após"
           value={projection ? String(projection.toRosterSize) : "-"}
         />
-        <Info label="Seu saldo após" value={formatMarketPrice(projectedBalance)} />
+        <Info label="Meu saldo após" value={formatMarketPrice(projectedBalance)} />
       </div>
+
       {projection && !projection.isValid && (
         <p className="text-sm text-amber-300">
-          A projeção precisa manter os dois elencos entre 5 e 15 cartas.
+          Ambos os elencos precisam terminar entre {MIN_ROSTER_SIZE} e {MAX_ROSTER_SIZE} cartas.
         </p>
       )}
       {projectedBalance < 0 && (
         <p className="text-sm text-amber-300">Saldo insuficiente para esta oferta.</p>
       )}
+
       <p className="text-xs text-slate-400">
-        A oferta expira em 24 horas. Máximo de 5 cartas de cada lado.
+        Expira em 24 horas. Máximo de 5 cartas de cada lado e R$ 100,00 em dinheiro.
       </p>
+
       <button
         type="submit"
         disabled={!canSubmit || mutation.isPending}
@@ -1049,7 +1073,7 @@ function OfferCard(props: {
             {offer.fromClub.name} → {offer.toClub.name}
           </p>
           <p className="mt-1 text-sm text-slate-400">
-            Status: {offerStatusLabel(offer.status)} · Dinheiro:{" "}
+            Status: {offerStatusLabel(offer.status)} · dinheiro:{" "}
             {formatMarketPrice(offer.cashCents)}
           </p>
           <p className="text-xs text-slate-500">Expira: {formatDateTime(offer.expiresAt)}</p>
@@ -1058,10 +1082,12 @@ function OfferCard(props: {
           {offer.direction === "incoming" ? "Recebida" : "Enviada"}
         </span>
       </div>
+
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <OfferCardList title="Cartas oferecidas" cards={offer.fromCards} />
         <OfferCardList title="Cartas solicitadas" cards={offer.toCards} />
       </div>
+
       <div className="mt-4 flex flex-wrap gap-2">
         {offer.canAccept && (
           <button
@@ -1123,6 +1149,7 @@ function MarketFilterPanel(props: {
 }) {
   const update = <Key extends keyof MarketFilters>(key: Key, value: MarketFilters[Key]) =>
     props.setFilters({ ...props.filters, [key]: value });
+
   return (
     <div className="mt-4 grid gap-3 rounded-md border border-slate-800 p-4 sm:grid-cols-2 lg:grid-cols-4">
       <label className="text-sm sm:col-span-2">
@@ -1134,6 +1161,7 @@ function MarketFilterPanel(props: {
           className={inputClass}
         />
       </label>
+
       <FilterSelect
         label="Posição"
         value={props.filters.position ?? ""}
@@ -1147,6 +1175,7 @@ function MarketFilterPanel(props: {
           ["ATA", "Atacante"],
         ]}
       />
+
       <FilterSelect
         label="Raridade"
         value={props.filters.rarity ?? ""}
@@ -1157,12 +1186,14 @@ function MarketFilterPanel(props: {
           ["pika", "Pika"],
         ]}
       />
+
       <FilterSelect
         label="Setor"
         value={props.filters.sector ?? ""}
         onChange={(value) => update("sector", value ? (value as MarketFilters["sector"]) : null)}
         options={PLAYER_SECTORS.map((sector) => [sector, sectorLabel(sector)])}
       />
+
       <label className="text-sm">
         <span className="text-slate-300">OVR mínimo</span>
         <input
@@ -1174,6 +1205,7 @@ function MarketFilterPanel(props: {
           className={inputClass}
         />
       </label>
+
       <label className="text-sm">
         <span className="text-slate-300">OVR máximo</span>
         <input
@@ -1185,6 +1217,7 @@ function MarketFilterPanel(props: {
           className={inputClass}
         />
       </label>
+
       <FilterSelect
         label="Ordenar por"
         value={props.filters.sortBy}
@@ -1195,6 +1228,7 @@ function MarketFilterPanel(props: {
           ["price", "Preço"],
         ]}
       />
+
       <FilterSelect
         label="Direção"
         value={props.filters.sortDirection}
@@ -1233,33 +1267,23 @@ function FilterSelect(props: {
   );
 }
 
-function PlayerMarketCard(props: {
+function MarketCardFrame(props: {
   card: MarketCardSummary;
   priceLabel: string;
-  reserved?: boolean;
+  priceCents: number;
   badge?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <article className="flex flex-col rounded-md border border-slate-800 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold">{props.card.name}</h3>
-          <p className="mt-1 text-sm text-slate-400">
-            {positionLabel(props.card.position)} · {rarityLabel(props.card.rarity)} ·{" "}
-            {sectorLabel(props.card.sector)}
-          </p>
-        </div>
-        <span className="rounded-md border border-slate-700 px-2 py-1 text-sm tabular-nums">
-          OVR {props.card.overall}
-        </span>
+    <article className="flex flex-col rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+      <div className="mx-auto w-full max-w-[19rem]">
+        <PlayerCard player={toPlayerCardData(props.card)} />
       </div>
-      {(props.reserved || props.badge) && (
-        <p className="mt-3 text-xs font-medium text-amber-300">
-          {props.badge ?? "Carta reservada"}
-        </p>
+
+      {props.badge && (
+        <p className="mt-4 text-center text-xs font-medium text-amber-300">{props.badge}</p>
       )}
-      <AttributeGrid attributes={props.card.attributes} />
+
       <dl className="mt-4 space-y-1 border-t border-slate-800 pt-3 text-sm">
         <div className="flex justify-between gap-3 text-slate-400">
           <dt>Valor de referência</dt>
@@ -1267,25 +1291,32 @@ function PlayerMarketCard(props: {
         </div>
         <div className="flex justify-between gap-3 font-medium">
           <dt>{props.priceLabel}</dt>
-          <dd className="tabular-nums">{formatMarketPrice(props.card.priceCents)}</dd>
+          <dd className="tabular-nums">{formatMarketPrice(props.priceCents)}</dd>
         </div>
       </dl>
+
       <div className="mt-4 flex flex-1 flex-col justify-end gap-3">{props.children}</div>
     </article>
   );
 }
 
-function AttributeGrid({ attributes }: { attributes: PlayerAttributes }) {
-  return (
-    <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
-      {PLAYER_ATTRIBUTE_KEYS.map((key) => (
-        <div key={key} className="flex justify-between gap-2">
-          <dt>{attributeLabel(key)}</dt>
-          <dd className="tabular-nums">{attributes[key]}</dd>
-        </div>
-      ))}
-    </dl>
-  );
+function toPlayerCardData(card: MarketCardSummary): PlayerCardData {
+  return {
+    id: card.playerId,
+    code: `${card.position}-${card.playerId.slice(0, 8)}`.toUpperCase(),
+    name: card.name,
+    position: card.position,
+    rarity: card.rarity,
+    sector: card.sector,
+    overall: card.overall,
+    velocity: card.attributes.velocity,
+    finishing: card.attributes.finishing,
+    passing: card.attributes.passing,
+    dribbling: card.attributes.dribbling,
+    defending: card.attributes.defending,
+    physical: card.attributes.physical,
+    goalkeeping: card.attributes.goalkeeping,
+  };
 }
 
 function ConfirmDialog(props: {
@@ -1321,7 +1352,7 @@ function ConfirmDialog(props: {
 }
 
 function MarketShell(props: {
-  children?: React.ReactNode;
+  children?: ReactNode;
   loadingMessage?: string;
   errorMessage?: string;
 }) {
@@ -1434,10 +1465,6 @@ function attributeLabel(attribute: PlayerAttributeKey): string {
     goalkeeping: "Goleiro",
   };
   return labels[attribute];
-}
-
-function positionLabel(position: MarketCardSummary["position"]): string {
-  return { GK: "Goleiro", DEF: "Defensor", MID: "Meio-campo", ATA: "Atacante" }[position];
 }
 
 function rarityLabel(rarity: MarketCardSummary["rarity"]): string {

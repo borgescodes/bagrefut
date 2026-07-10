@@ -20,6 +20,8 @@ export {
   trainClubPlayer,
 } from "@/lib/market.functions";
 
+export { getInitialPackExperience, openInitialPack } from "@/lib/pack.functions";
+
 /**
  * Returns the current user's profile (id, username, status) and roles.
  * Uses requireSupabaseAuth so RLS applies. Nothing sensitive is exposed.
@@ -95,17 +97,6 @@ export const updateClubIdentity = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { club: club?.[0] ?? null };
-  });
-
-export const openInitialPack = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((data: unknown) => z.object({ clubId: z.string().uuid() }).parse(data))
-  .handler(async ({ data, context }) => {
-    const { data: items, error } = await context.supabase.rpc("open_initial_pack", {
-      _club_id: data.clubId,
-    });
-    if (error) throw new Error(error.message);
-    return { items: items ?? [] };
   });
 
 /** Returns the caller's club (if any). */

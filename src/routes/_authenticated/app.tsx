@@ -123,6 +123,10 @@ function AppHome() {
             <Link to="/classificacao" className="mt-2 inline-block underline">
               Ver classificacao →
             </Link>
+            <br />
+            <Link to="/mercado" className="mt-2 inline-block underline">
+              Mercado e treino
+            </Link>
           </div>
         ) : (
           <div className="mt-2 space-y-2">

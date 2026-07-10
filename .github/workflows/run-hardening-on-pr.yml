@@ -1,0 +1,51 @@
+name: Run operational hardening on PR
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    if: github.head_ref == 'fix/operational-automation-hardening'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/operational-automation-hardening
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Extract and run hardening generator
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('.github/workflows/harden-operational-automation.yml').read_text()
+          start = source.index("          python3 <<'PY'\n") + len("          python3 <<'PY'\n")
+          end = source.index("\n          PY\n", start)
+          lines = source[start:end].splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          Path('/tmp/harden.py').write_text(script)
+          PY
+          python3 /tmp/harden.py
+          rm -f .github/workflows/run-hardening-on-pr.yml
+      - name: Run checks
+        run: |
+          bun install --frozen-lockfile
+          bun run check
+          git diff --check
+      - name: Commit hardened implementation
+        shell: bash
+        run: |
+          git restore src/routeTree.gen.ts 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: endurecer automacao operacional"
+          git push origin HEAD:fix/operational-automation-hardening

@@ -92,8 +92,9 @@ export const adminListPendingUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertApprovedAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    // Use RLS-scoped client: approved admins can read profiles via
+    // "profiles_self_or_approved_admin_read" policy. Avoids service-role usage.
+    const { data, error } = await context.supabase
       .from("profiles")
       .select("id, username, status, created_at")
       .in("status", ["pending", "approved", "blocked"])

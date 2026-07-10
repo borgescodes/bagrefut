@@ -357,7 +357,9 @@ function RosterTab(props: {
               <div className="grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
-                  disabled={Boolean(saleReason) || sellMutation.isPending || trainMutation.isPending}
+                  disabled={
+                    Boolean(saleReason) || sellMutation.isPending || trainMutation.isPending
+                  }
                   onClick={() => setSale(card)}
                   className={secondaryButtonClass}
                 >
@@ -568,9 +570,7 @@ function P2PTab(props: {
     },
     onSuccess: async (_result, selected) => {
       setAction(null);
-      props.reportSuccess(
-        selected.type === "buy" ? "Compra P2P concluída." : "Anúncio cancelado.",
-      );
+      props.reportSuccess(selected.type === "buy" ? "Compra P2P concluída." : "Anúncio cancelado.");
       await props.refreshMarket();
     },
     onError: props.reportError,
@@ -641,8 +641,8 @@ function P2PTab(props: {
           </button>
         </div>
         <p className="mt-2 text-xs text-slate-400">
-          Preço: R$ 0,01 a R$ 100,00. O clube precisa permanecer com no mínimo{" "}
-          {MIN_ROSTER_SIZE} cartas.
+          Preço: R$ 0,01 a R$ 100,00. O clube precisa permanecer com no mínimo {MIN_ROSTER_SIZE}{" "}
+          cartas.
         </p>
       </form>
 
@@ -740,8 +740,10 @@ function OffersTab(props: {
 
   const actionMutation = useMutation({
     mutationFn: async (selected: NonNullable<typeof action>) => {
-      if (selected.type === "accept") return acceptFn({ data: { offerId: selected.offer.offerId } });
-      if (selected.type === "reject") return rejectFn({ data: { offerId: selected.offer.offerId } });
+      if (selected.type === "accept")
+        return acceptFn({ data: { offerId: selected.offer.offerId } });
+      if (selected.type === "reject")
+        return rejectFn({ data: { offerId: selected.offer.offerId } });
       return cancelFn({ data: { offerId: selected.offer.offerId } });
     },
     onSuccess: async (_result, selected) => {
@@ -975,7 +977,10 @@ function CreateOfferForm(props: {
       </label>
 
       <div className="grid gap-3 rounded-md border border-slate-900 p-3 text-sm sm:grid-cols-3">
-        <Info label="Meu elenco após" value={projection ? String(projection.fromRosterSize) : "-"} />
+        <Info
+          label="Meu elenco após"
+          value={projection ? String(projection.fromRosterSize) : "-"}
+        />
         <Info
           label="Elenco destinatário após"
           value={projection ? String(projection.toRosterSize) : "-"}
@@ -1068,7 +1073,7 @@ function OfferCard(props: {
             {offer.fromClub.name} → {offer.toClub.name}
           </p>
           <p className="mt-1 text-sm text-slate-400">
-            Status: {offerStatusLabel(offer.status)} · dinheiro: {" "}
+            Status: {offerStatusLabel(offer.status)} · dinheiro:{" "}
             {formatMarketPrice(offer.cashCents)}
           </p>
           <p className="text-xs text-slate-500">Expira: {formatDateTime(offer.expiresAt)}</p>

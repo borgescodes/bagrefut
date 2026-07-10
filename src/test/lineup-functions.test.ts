@@ -132,12 +132,12 @@ describe("saveLineup RPC wrapper", () => {
         style: "balanced",
         players,
       }),
-    ).rejects.toThrow("O prazo para editar a escalacao desta rodada ja encerrou.");
+    ).rejects.toThrow("O prazo para editar a escalação desta rodada já encerrou.");
   });
 
   it("keeps a direct mapper for UI error states", () => {
     expect(mapSaveLineupErrorMessage(new Error("duplicate_club_player"))).toBe(
-      "O mesmo jogador nao pode aparecer duas vezes.",
+      "O mesmo jogador não pode aparecer duas vezes.",
     );
   });
 });

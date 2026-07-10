@@ -63,7 +63,7 @@ describe("match event access helpers", () => {
 
   it("maps forbidden match events errors to pt-BR", () => {
     expect(mapMatchEventsErrorMessage(new Error("match_events_forbidden"))).toBe(
-      "Eventos detalhados disponiveis somente para partidas do seu clube.",
+      "Eventos detalhados disponíveis somente para partidas do seu clube.",
     );
   });
 });

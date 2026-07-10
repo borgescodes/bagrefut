@@ -12,6 +12,8 @@ import {
   getSeasonOperationalState,
   getSeasonStandings,
 } from "@/lib/season.functions";
+import { getMyClub } from "@/lib/game.functions";
+import { PageSkeleton } from "@/components/feedback/PageStates";
 
 export const Route = createFileRoute("/_authenticated/classificacao")({
   component: StandingsPage,
@@ -21,10 +23,12 @@ function StandingsPage() {
   const stateFn = useServerFn(getSeasonOperationalState);
   const standingsFn = useServerFn(getSeasonStandings);
   const historyFn = useServerFn(getSeasonHistory);
+  const clubFn = useServerFn(getMyClub);
 
   const state = useQuery({ queryKey: ["season", "state"], queryFn: () => stateFn() });
   const standings = useQuery({ queryKey: ["season", "standings"], queryFn: () => standingsFn() });
   const history = useQuery({ queryKey: ["season", "history"], queryFn: () => historyFn() });
+  const club = useQuery({ queryKey: ["myClub"], queryFn: () => clubFn() });
 
   const uiState = state.data ? adaptSeasonRpcState(asSeasonRpcState(state.data)) : null;
   const currentRound = state.data ? readRecord(asRecord(state.data).current_round) : null;
@@ -39,14 +43,22 @@ function StandingsPage() {
         <Link to="/app" className="text-sm underline">
           Voltar
         </Link>
-        <h1 className="mt-4 text-xl font-bold">Classificacao</h1>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight">Classificação</h1>
+        <p className="mt-2 text-sm text-slate-400">
+          Temporada, rodada atual, tabela e campeões anteriores.
+        </p>
 
         <section className="mt-6 rounded-md border border-slate-800 p-4">
           <h2 className="font-medium">Temporada atual</h2>
           {state.isLoading ? (
-            <p className="mt-2 text-sm text-slate-400">Carregando...</p>
+            <PageSkeleton rows={1} />
           ) : state.error || !uiState ? (
-            <p className="mt-2 text-sm text-red-400">Nao foi possivel carregar a temporada.</p>
+            <p className="mt-2 text-sm text-red-400" role="alert">
+              Não foi possível carregar a temporada.{" "}
+              <button type="button" className="underline" onClick={() => void state.refetch()}>
+                Tentar novamente
+              </button>
+            </p>
           ) : (
             <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
               <Info label="Status" value={statusLabel(uiState.operationalStatus)} />
@@ -81,23 +93,28 @@ function StandingsPage() {
         <section className="mt-6 rounded-md border border-slate-800 p-4">
           <h2 className="font-medium">Tabela</h2>
           {standings.isLoading ? (
-            <p className="mt-2 text-sm text-slate-400">Carregando classificacao...</p>
+            <PageSkeleton rows={3} />
           ) : standings.error ? (
-            <p className="mt-2 text-sm text-red-400">Nao foi possivel carregar a classificacao.</p>
+            <p className="mt-2 text-sm text-red-400" role="alert">
+              Não foi possível carregar a classificação.{" "}
+              <button type="button" className="underline" onClick={() => void standings.refetch()}>
+                Tentar novamente
+              </button>
+            </p>
           ) : standings.data?.standings.length ? (
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-[760px] w-full text-sm">
+            <div className="standings-table-wrap mt-4 overflow-x-auto">
+              <table className="w-full min-w-[460px] text-sm">
                 <thead className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
                   <tr>
                     <th className="py-2">Pos</th>
                     <th>Clube</th>
                     <th>J</th>
                     <th>Pts</th>
-                    <th>V</th>
-                    <th>E</th>
-                    <th>D</th>
-                    <th>GP</th>
-                    <th>GC</th>
+                    <th className="standings-secondary">V</th>
+                    <th className="standings-secondary">E</th>
+                    <th className="standings-secondary">D</th>
+                    <th className="standings-secondary">GP</th>
+                    <th className="standings-secondary">GC</th>
                     <th>SG</th>
                   </tr>
                 </thead>
@@ -105,16 +122,20 @@ function StandingsPage() {
                   {standings.data.standings.map((row) => {
                     const formatted = formatStandingsRow(row);
                     return (
-                      <tr key={row.club_id} className="border-b border-slate-900">
+                      <tr
+                        key={row.club_id}
+                        className="border-b border-slate-900"
+                        data-user-club={formatted.club === club.data?.name || undefined}
+                      >
                         <td className="py-2">{formatted.position}</td>
                         <td>{formatted.club}</td>
                         <td>{formatted.played}</td>
                         <td>{formatted.points}</td>
-                        <td>{formatted.wins}</td>
-                        <td>{formatted.draws}</td>
-                        <td>{formatted.losses}</td>
-                        <td>{formatted.goalsFor}</td>
-                        <td>{formatted.goalsAgainst}</td>
+                        <td className="standings-secondary">{formatted.wins}</td>
+                        <td className="standings-secondary">{formatted.draws}</td>
+                        <td className="standings-secondary">{formatted.losses}</td>
+                        <td className="standings-secondary">{formatted.goalsFor}</td>
+                        <td className="standings-secondary">{formatted.goalsAgainst}</td>
                         <td>{formatted.goalDifference}</td>
                       </tr>
                     );
@@ -123,14 +144,14 @@ function StandingsPage() {
               </table>
             </div>
           ) : (
-            <p className="mt-2 text-sm text-slate-400">Classificacao indisponivel.</p>
+            <p className="mt-2 text-sm text-slate-400">Classificação indisponível.</p>
           )}
         </section>
 
         <section className="mt-6 rounded-md border border-slate-800 p-4">
-          <h2 className="font-medium">Historico</h2>
+          <h2 className="font-medium">Histórico</h2>
           {history.isLoading ? (
-            <p className="mt-2 text-sm text-slate-400">Carregando historico...</p>
+            <PageSkeleton rows={2} />
           ) : historyRows.length ? (
             <div className="mt-3 space-y-2 text-sm">
               {historyRows.map((season) => (
@@ -140,7 +161,7 @@ function StandingsPage() {
                 >
                   <p className="font-medium">{String(season.name ?? "Temporada")}</p>
                   <p className="text-slate-400">
-                    Campeao: {String(season.champion_club_name ?? "Nao definido")}
+                    Campeão: {String(season.champion_club_name ?? "Não definido")}
                   </p>
                 </div>
               ))}

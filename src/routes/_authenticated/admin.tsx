@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
+import { ConfirmActionDialog } from "@/components/feedback/ConfirmActionDialog";
+import { PageSkeleton } from "@/components/feedback/PageStates";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DEFAULT_SEASON_TIMEZONE,
   getSeasonAdminActionState,
@@ -36,6 +39,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 function AdminPage() {
+  const [adminTab, setAdminTab] = useState<"users" | "season" | "matches" | "processing">("users");
   const listFn = useServerFn(adminListPendingUsers);
   const statusFn = useServerFn(adminSetUserStatus);
   const resetFn = useServerFn(adminResetUserPassword);
@@ -101,172 +105,253 @@ function AdminPage() {
     setCopyFeedback("Senha copiada.");
   }
 
-  function resetPasswordForUser(user: { id: string; username: string }) {
-    if (!window.confirm(`Gerar senha temporária para ${user.username}?`)) return;
-    reset.mutate(user.id);
-  }
-
-  if (list.isLoading) return <Shell>Carregando...</Shell>;
+  if (list.isLoading)
+    return (
+      <AdminPageLayout>
+        <PageSkeleton rows={4} />
+      </AdminPageLayout>
+    );
   if (list.error)
     return (
-      <Shell>
+      <AdminPageLayout>
         <p className="text-red-400">{adminErrorMessage(list.error)}</p>
-      </Shell>
+      </AdminPageLayout>
     );
 
   return (
-    <Shell>
+    <AdminPageLayout>
       <h1 className="text-xl font-bold">Painel administrativo</h1>
       <p className="mt-1 text-xs text-slate-500">
-        Apenas admins. Ações registram log em admin_audit_logs.
+        Gestão de usuários, temporada, partidas e processamento operacional.
       </p>
 
-      <AdminSeasonSection />
-      <section className="mt-6 rounded-md border border-slate-800 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-medium">Simulacao de partidas</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Rodada atual: {currentRoundNumber > 0 ? currentRoundNumber : "indisponivel"} -{" "}
-              {text(currentRound?.status, "sem status")}
-            </p>
-          </div>
+      <div className="admin-tabs" role="tablist" aria-label="Áreas administrativas">
+        {(
+          [
+            ["users", "Usuários"],
+            ["season", "Temporada"],
+            ["matches", "Partidas"],
+            ["processing", "Processamento"],
+          ] as const
+        ).map(([value, label]) => (
           <button
+            key={value}
             type="button"
-            onClick={() => currentRoundId && runRound.mutate(currentRoundId)}
-            disabled={!currentRoundId || runRound.isPending || currentMatches.length === 0}
-            className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+            role="tab"
+            aria-selected={adminTab === value}
+            onClick={() => setAdminTab(value)}
           >
-            Simular rodada
+            {label}
           </button>
-        </div>
+        ))}
+      </div>
 
-        {roundState.error && (
-          <p className="mt-3 text-sm text-red-400">{adminErrorMessage(roundState.error)}</p>
-        )}
-        {runMatch.error && (
-          <p className="mt-3 text-sm text-red-400">{adminErrorMessage(runMatch.error)}</p>
-        )}
-        {runRound.error && (
-          <p className="mt-3 text-sm text-red-400">{adminErrorMessage(runRound.error)}</p>
-        )}
-        {(runMatch.data || runRound.data) && (
-          <p className="mt-3 text-xs text-emerald-300">Resultado atualizado.</p>
-        )}
-
-        <div className="mt-4 space-y-2 text-sm">
-          {matches.isLoading ? (
-            <p className="text-slate-400">Carregando partidas...</p>
-          ) : currentMatches.length ? (
-            currentMatches.map((match) => (
-              <div
-                key={match.match_id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-900 p-2"
-              >
-                <div>
-                  <p className="text-xs text-slate-500">Status: {match.status}</p>
-                  <p>
-                    <b>{match.home_club_abbreviation}</b> {match.home_goals} x {match.away_goals}{" "}
-                    <b>{match.away_club_abbreviation}</b>
-                  </p>
-                </div>
+      {adminTab === "season" && <AdminSeasonSection />}
+      {adminTab === "matches" && (
+        <section className="mt-6 rounded-md border border-slate-800 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-medium">Simulação de partidas</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Rodada atual: {currentRoundNumber > 0 ? currentRoundNumber : "indisponível"} ·{" "}
+                {humanAdminLabel(text(currentRound?.status, "sem status"))}
+              </p>
+            </div>
+            <ConfirmActionDialog
+              title="Simular rodada atual?"
+              description="As partidas pendentes da rodada serão processadas pelo contrato existente."
+              confirmLabel="Simular rodada"
+              pending={runRound.isPending}
+              onConfirm={() => currentRoundId && runRound.mutate(currentRoundId)}
+              trigger={
                 <button
                   type="button"
-                  onClick={() => runMatch.mutate(match.match_id)}
-                  disabled={match.status === "finished" || runMatch.isPending || runRound.isPending}
-                  className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+                  disabled={!currentRoundId || runRound.isPending || currentMatches.length === 0}
+                  className="rounded-md border border-slate-700 px-3 py-2 text-xs disabled:opacity-60"
                 >
-                  Simular partida
+                  Simular rodada
+                </button>
+              }
+            />
+          </div>
+
+          {roundState.error && (
+            <p className="mt-3 text-sm text-red-400">{adminErrorMessage(roundState.error)}</p>
+          )}
+          {runMatch.error && (
+            <p className="mt-3 text-sm text-red-400">{adminErrorMessage(runMatch.error)}</p>
+          )}
+          {runRound.error && (
+            <p className="mt-3 text-sm text-red-400">{adminErrorMessage(runRound.error)}</p>
+          )}
+          {(runMatch.data || runRound.data) && (
+            <p className="mt-3 text-xs text-emerald-300">Resultado atualizado.</p>
+          )}
+
+          <div className="mt-4 space-y-2 text-sm">
+            {matches.isLoading ? (
+              <PageSkeleton rows={3} />
+            ) : currentMatches.length ? (
+              currentMatches.map((match) => (
+                <div
+                  key={match.match_id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-900 p-2"
+                >
+                  <div>
+                    <p className="text-xs text-slate-500">
+                      Status: {matchStatusLabel(match.status)}
+                    </p>
+                    <p>
+                      <b>{match.home_club_abbreviation}</b> {match.home_goals} x {match.away_goals}{" "}
+                      <b>{match.away_club_abbreviation}</b>
+                    </p>
+                  </div>
+                  <ConfirmActionDialog
+                    title="Simular esta partida?"
+                    description={`${match.home_club_abbreviation} × ${match.away_club_abbreviation} será processada agora.`}
+                    confirmLabel="Simular partida"
+                    pending={runMatch.isPending}
+                    onConfirm={() => runMatch.mutate(match.match_id)}
+                    trigger={
+                      <button
+                        type="button"
+                        disabled={
+                          match.status === "finished" || runMatch.isPending || runRound.isPending
+                        }
+                        className="rounded-md border border-slate-700 px-3 py-2 text-xs disabled:opacity-60"
+                      >
+                        Simular partida
+                      </button>
+                    }
+                  />
+                </div>
+              ))
+            ) : (
+              <p className="text-slate-400">Nenhuma partida na rodada atual.</p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {adminTab === "processing" && <AdminOperationalProcessingSection />}
+
+      {adminTab === "users" && (
+        <section className="mt-6 rounded-md border border-slate-800 p-4">
+          <h2 className="font-medium">Usuários</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Aprove, bloqueie ou gere uma senha temporária de uso único.
+          </p>
+          <div className="mt-4 overflow-x-auto">
+            <table className="mt-6 w-full text-sm">
+              <thead className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="py-2">Usuário</th>
+                  <th>Status</th>
+                  <th className="text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.data?.map((u) => (
+                  <tr key={u.id} className="border-b border-slate-900">
+                    <td className="py-2">{u.username}</td>
+                    <td>{userStatusLabel(u.status)}</td>
+                    <td className="space-x-2 text-right">
+                      {u.status !== "approved" && (
+                        <ConfirmActionDialog
+                          title={`Aprovar ${u.username}?`}
+                          description="O usuário poderá entrar no jogo e criar um clube."
+                          confirmLabel="Aprovar"
+                          pending={setStatus.isPending}
+                          onConfirm={() => setStatus.mutate({ userId: u.id, status: "approved" })}
+                          trigger={
+                            <button
+                              disabled={setStatus.isPending || reset.isPending}
+                              className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+                            >
+                              Aprovar
+                            </button>
+                          }
+                        />
+                      )}
+                      {u.status !== "blocked" && (
+                        <ConfirmActionDialog
+                          title={`Bloquear ${u.username}?`}
+                          description="O acesso do usuário será interrompido até nova aprovação."
+                          confirmLabel="Bloquear"
+                          destructive
+                          pending={setStatus.isPending}
+                          onConfirm={() => setStatus.mutate({ userId: u.id, status: "blocked" })}
+                          trigger={
+                            <button
+                              disabled={setStatus.isPending || reset.isPending}
+                              className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+                            >
+                              Bloquear
+                            </button>
+                          }
+                        />
+                      )}
+                      <ConfirmActionDialog
+                        title={`Gerar senha para ${u.username}?`}
+                        description="A senha temporária será exibida apenas uma vez nesta tela."
+                        confirmLabel="Gerar senha"
+                        pending={reset.isPending}
+                        onConfirm={() => reset.mutate(u.id)}
+                        trigger={
+                          <button
+                            disabled={reset.isPending || setStatus.isPending}
+                            className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+                          >
+                            Gerar senha temporária
+                          </button>
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {reset.error && (
+            <p className="mt-4 text-sm text-red-400">{adminErrorMessage(reset.error)}</p>
+          )}
+
+          {tempPassword && (
+            <div className="mt-6 rounded-md border border-amber-700 bg-amber-950/40 p-3 text-sm">
+              <p>
+                Senha temporária gerada para <b>{tempPassword.username}</b>
+              </p>
+              <code className="mt-2 block font-mono text-base">{tempPassword.password}</code>
+              <p className="mt-2 text-xs text-amber-200">
+                Copie agora e envie ao usuário por canal seguro. A senha não será mostrada
+                novamente.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={copyPassword}
+                  className="rounded-md border border-amber-600 px-2 py-1 text-xs"
+                >
+                  Copiar senha
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTempPassword(null);
+                    setCopyFeedback(null);
+                  }}
+                  className="rounded-md border border-slate-700 px-2 py-1 text-xs"
+                >
+                  Fechar
                 </button>
               </div>
-            ))
-          ) : (
-            <p className="text-slate-400">Nenhuma partida na rodada atual.</p>
+              {copyFeedback && <p className="mt-2 text-xs text-amber-100">{copyFeedback}</p>}
+            </div>
           )}
-        </div>
-      </section>
-
-      <AdminOperationalProcessingSection />
-
-      <table className="mt-6 w-full text-sm">
-        <thead className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
-          <tr>
-            <th className="py-2">Username</th>
-            <th>Status</th>
-            <th className="text-right">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {list.data?.map((u) => (
-            <tr key={u.id} className="border-b border-slate-900">
-              <td className="py-2">{u.username}</td>
-              <td>{u.status}</td>
-              <td className="space-x-2 text-right">
-                {u.status !== "approved" && (
-                  <button
-                    onClick={() => setStatus.mutate({ userId: u.id, status: "approved" })}
-                    disabled={setStatus.isPending || reset.isPending}
-                    className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
-                  >
-                    Aprovar
-                  </button>
-                )}
-                {u.status !== "blocked" && (
-                  <button
-                    onClick={() => setStatus.mutate({ userId: u.id, status: "blocked" })}
-                    disabled={setStatus.isPending || reset.isPending}
-                    className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
-                  >
-                    Bloquear
-                  </button>
-                )}
-                <button
-                  onClick={() => resetPasswordForUser(u)}
-                  disabled={reset.isPending || setStatus.isPending}
-                  className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
-                >
-                  Gerar senha temporária
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {reset.error && <p className="mt-4 text-sm text-red-400">{adminErrorMessage(reset.error)}</p>}
-
-      {tempPassword && (
-        <div className="mt-6 rounded-md border border-amber-700 bg-amber-950/40 p-3 text-sm">
-          <p>
-            Senha temporária gerada para <b>{tempPassword.username}</b>
-          </p>
-          <code className="mt-2 block font-mono text-base">{tempPassword.password}</code>
-          <p className="mt-2 text-xs text-amber-200">
-            Copie agora e envie ao usuário por canal seguro. A senha não será mostrada novamente.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={copyPassword}
-              className="rounded-md border border-amber-600 px-2 py-1 text-xs"
-            >
-              Copiar senha
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTempPassword(null);
-                setCopyFeedback(null);
-              }}
-              className="rounded-md border border-slate-700 px-2 py-1 text-xs"
-            >
-              Fechar
-            </button>
-          </div>
-          {copyFeedback && <p className="mt-2 text-xs text-amber-100">{copyFeedback}</p>}
-        </div>
+        </section>
       )}
-    </Shell>
+    </AdminPageLayout>
   );
 }
 
@@ -367,21 +452,21 @@ function AdminSeasonSection() {
     <section className="mt-6 rounded-md border border-slate-800 p-4">
       <h2 className="font-medium">Temporada</h2>
       {setup.isLoading ? (
-        <p className="mt-2 text-sm text-slate-400">Carregando configuração...</p>
+        <PageSkeleton rows={4} />
       ) : setup.error ? (
         <p className="mt-2 text-sm text-red-400">{adminErrorMessage(setup.error)}</p>
       ) : (
         <div className="mt-4 space-y-5">
           <div className="grid gap-3 text-sm sm:grid-cols-3">
             <AdminInfo label="Estado" value={seasonStatusLabel(parsed.operationalStatus)} />
-            <AdminInfo label="Elegiveis" value={`${parsed.eligibleCount} de 6`} />
+            <AdminInfo label="Elegíveis" value={`${parsed.eligibleCount} de 6`} />
             <AdminInfo label="Selecionados" value={`${selectedClubIds.length} de 6`} />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <TextField label="Nome" value={name} onChange={setName} />
             <TextField label="Data inicial" type="date" value={startDate} onChange={setStartDate} />
-            <TextField label="Horario" type="time" value={matchTime} onChange={setMatchTime} />
+            <TextField label="Horário" type="time" value={matchTime} onChange={setMatchTime} />
             <TextField
               label="Intervalo entre rodadas"
               type="number"
@@ -389,7 +474,7 @@ function AdminSeasonSection() {
               onChange={(value) => setIntervalDays(Number(value))}
             />
             <label className="text-sm">
-              <span className="mb-1 block text-xs uppercase text-slate-500">Inscricoes</span>
+              <span className="mb-1 block text-xs uppercase text-slate-500">Inscrições</span>
               <select
                 value={registrationStatus}
                 onChange={(event) =>
@@ -402,7 +487,7 @@ function AdminSeasonSection() {
               </select>
             </label>
             <TextField
-              label="Limite inscricoes"
+              label="Limite das inscrições"
               type="date"
               value={registrationDeadline}
               onChange={setRegistrationDeadline}
@@ -410,7 +495,7 @@ function AdminSeasonSection() {
           </div>
 
           <div>
-            <p className="text-xs uppercase text-slate-500">Premiacao por posicao (centavos)</p>
+            <p className="text-xs uppercase text-slate-500">Premiação por posição (centavos)</p>
             <div className="mt-2 grid gap-2 sm:grid-cols-6">
               {prizes.map((amount, index) => (
                 <label key={index} className="text-xs">
@@ -443,7 +528,9 @@ function AdminSeasonSection() {
                   <span>
                     {club.club_name}{" "}
                     <span className="text-xs text-slate-500">
-                      {club.is_eligible ? "elegivel" : (club.ineligible_reason ?? "pendente")}
+                      {club.is_eligible
+                        ? "elegível"
+                        : humanAdminLabel(club.ineligible_reason ?? "pendente")}
                     </span>
                   </span>
                   <input
@@ -464,7 +551,7 @@ function AdminSeasonSection() {
               disabled={saveSetup.isPending}
               className="rounded-md border border-slate-700 px-3 py-1.5 disabled:opacity-60"
             >
-              Salvar configuracao
+              Salvar configuração
             </button>
             <button
               type="button"
@@ -472,24 +559,41 @@ function AdminSeasonSection() {
               disabled={!configId || selectedClubIds.length !== 6 || saveParticipants.isPending}
               className="rounded-md border border-slate-700 px-3 py-1.5 disabled:opacity-60"
             >
-              Salvar selecao
+              Salvar seleção
             </button>
-            <button
-              type="button"
-              onClick={() => start.mutate()}
-              disabled={!configId || startState.disabled || start.isPending}
-              className="rounded-md border border-emerald-700 px-3 py-1.5 disabled:opacity-60"
-            >
-              Iniciar temporada
-            </button>
-            <button
-              type="button"
-              onClick={() => finish.mutate()}
-              disabled={parsed.operationalStatus !== "active" || finish.isPending}
-              className="rounded-md border border-amber-700 px-3 py-1.5 disabled:opacity-60"
-            >
-              Encerrar temporada
-            </button>
+            <ConfirmActionDialog
+              title="Iniciar temporada?"
+              description="A tabela será criada com os seis clubes selecionados e a configuração salva."
+              confirmLabel="Iniciar temporada"
+              pending={start.isPending}
+              onConfirm={() => start.mutate()}
+              trigger={
+                <button
+                  type="button"
+                  disabled={!configId || startState.disabled || start.isPending}
+                  className="rounded-md border border-emerald-700 px-3 py-1.5 disabled:opacity-60"
+                >
+                  Iniciar temporada
+                </button>
+              }
+            />
+            <ConfirmActionDialog
+              title="Encerrar temporada?"
+              description="Esta ação conclui a temporada ativa e aplica as premiações conforme as regras existentes."
+              confirmLabel="Encerrar temporada"
+              destructive
+              pending={finish.isPending}
+              onConfirm={() => finish.mutate()}
+              trigger={
+                <button
+                  type="button"
+                  disabled={parsed.operationalStatus !== "active" || finish.isPending}
+                  className="rounded-md border border-amber-700 px-3 py-1.5 disabled:opacity-60"
+                >
+                  Encerrar temporada
+                </button>
+              }
+            />
           </div>
 
           {startState.reason && <p className="text-xs text-amber-300">{startState.reason}</p>}
@@ -527,7 +631,7 @@ function AdminOperationalProcessingSection() {
       <div>
         <h2 className="font-medium">Processamento operacional</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Ultima execucao: {latest ? jobDate(latest.finished_at ?? latest.started_at) : "sem dados"}
+          Última execução: {latest ? jobDate(latest.finished_at ?? latest.started_at) : "sem dados"}
         </p>
       </div>
 
@@ -535,9 +639,9 @@ function AdminOperationalProcessingSection() {
       {retry.error && <p className="mt-3 text-sm text-red-400">{adminErrorMessage(retry.error)}</p>}
 
       <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-        <AdminInfo label="Failed" value={String(failedCount)} />
-        <AdminInfo label="Dead" value={String(deadCount)} />
-        <AdminInfo label="Succeeded" value={String(succeededCount)} />
+        <AdminInfo label="Falhas" value={String(failedCount)} />
+        <AdminInfo label="Esgotados" value={String(deadCount)} />
+        <AdminInfo label="Concluídos" value={String(succeededCount)} />
       </div>
 
       <div className="mt-4 overflow-x-auto">
@@ -546,24 +650,24 @@ function AdminOperationalProcessingSection() {
             <tr>
               <th className="py-2">Status</th>
               <th>Job</th>
-              <th>Scheduled for</th>
-              <th>Attempt count</th>
-              <th>Last error</th>
-              <th className="text-right">Acoes</th>
+              <th>Agendado para</th>
+              <th>Tentativas</th>
+              <th>Último erro</th>
+              <th className="text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
             {jobs.isLoading ? (
               <tr>
                 <td colSpan={6} className="py-3 text-slate-400">
-                  Carregando execucoes...
+                  <Skeleton className="h-12 w-full" />
                 </td>
               </tr>
             ) : rows.length ? (
               rows.map((job) => (
                 <tr key={job.id} className="border-b border-slate-900">
-                  <td className="py-2">{job.status}</td>
-                  <td>{job.job_type}</td>
+                  <td className="py-2">{jobStatusLabel(job.status)}</td>
+                  <td>{jobTypeLabel(job.job_type)}</td>
                   <td>{jobDate(job.scheduled_for)}</td>
                   <td>
                     {job.attempt_count} de {job.max_attempts}
@@ -571,14 +675,22 @@ function AdminOperationalProcessingSection() {
                   <td className="max-w-[220px] truncate">{jobErrorText(job.last_error)}</td>
                   <td className="text-right">
                     {(job.status === "failed" || job.status === "dead") && (
-                      <button
-                        type="button"
-                        onClick={() => retry.mutate(job.id)}
-                        disabled={retry.isPending}
-                        className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
-                      >
-                        Retry
-                      </button>
+                      <ConfirmActionDialog
+                        title="Tentar novamente?"
+                        description="A execução operacional será reenfileirada pelo contrato existente."
+                        confirmLabel="Tentar novamente"
+                        pending={retry.isPending}
+                        onConfirm={() => retry.mutate(job.id)}
+                        trigger={
+                          <button
+                            type="button"
+                            disabled={retry.isPending}
+                            className="rounded-md border border-slate-700 px-2 py-1 text-xs disabled:opacity-60"
+                          >
+                            Tentar novamente
+                          </button>
+                        }
+                      />
                     )}
                   </td>
                 </tr>
@@ -586,7 +698,7 @@ function AdminOperationalProcessingSection() {
             ) : (
               <tr>
                 <td colSpan={6} className="py-3 text-slate-400">
-                  Nenhuma execucao registrada.
+                  Nenhuma execução registrada.
                 </td>
               </tr>
             )}
@@ -606,29 +718,83 @@ function adminErrorMessage(error: unknown): string {
     target_auth_user_not_found: "Usuário alvo não encontrado no Auth.",
     password_update_failed: "Não foi possível atualizar a senha.",
     password_update_missing_user: "A atualização não retornou o usuário alterado.",
-    season_name_invalid: "Nome da temporada invalido.",
-    season_start_date_invalid: "Data inicial invalida.",
-    season_match_time_invalid: "Horario padrao invalido.",
-    season_round_interval_invalid: "Intervalo entre rodadas invalido.",
-    season_timezone_invalid: "Timezone invalido.",
-    season_prizes_invalid: "Premiacao invalida.",
+    season_name_invalid: "Nome da temporada inválido.",
+    season_start_date_invalid: "Data inicial inválida.",
+    season_match_time_invalid: "Horário padrão inválido.",
+    season_round_interval_invalid: "Intervalo entre rodadas inválido.",
+    season_timezone_invalid: "Fuso horário inválido.",
+    season_prizes_invalid: "Premiação inválida.",
     season_selection_requires_exactly_6: "Selecione exatamente 6 clubes.",
-    season_selection_has_duplicates: "A selecao tem clube duplicado.",
-    season_selection_has_ineligible_club: "A selecao tem clube inelegivel.",
-    season_selected_club_ineligible: "Um dos clubes selecionados nao esta elegivel.",
-    active_season_exists: "Ja existe uma temporada ativa.",
+    season_selection_has_duplicates: "A seleção tem clube duplicado.",
+    season_selection_has_ineligible_club: "A seleção tem clube inelegível.",
+    season_selected_club_ineligible: "Um dos clubes selecionados não está elegível.",
+    active_season_exists: "Já existe uma temporada ativa.",
     season_has_pending_matches: "A temporada ainda tem partidas pendentes.",
-    season_not_active: "Temporada nao esta ativa.",
-    season_prize_already_credited: "A premiacao desta temporada ja foi creditada.",
-    lineup_auto_insufficient_players: "Um clube nao tem jogadores elegiveis suficientes.",
-    match_not_found: "Partida nao encontrada.",
-    round_not_found: "Rodada nao encontrada.",
-    match_not_simulable: "Partida nao esta em status simulavel.",
-    job_run_not_retryable: "Execucao nao pode ser reenfileirada.",
-    operational_job_status_invalid: "Status operacional invalido.",
+    season_not_active: "Temporada não está ativa.",
+    season_prize_already_credited: "A premiação desta temporada já foi creditada.",
+    lineup_auto_insufficient_players: "Um clube não tem jogadores elegíveis suficientes.",
+    match_not_found: "Partida não encontrada.",
+    round_not_found: "Rodada não encontrada.",
+    match_not_simulable: "Partida não está em status simulável.",
+    job_run_not_retryable: "A execução não pode ser reenfileirada.",
+    operational_job_status_invalid: "Status operacional inválido.",
   };
   const code = Object.keys(messages).find((key) => message.includes(key));
   return code ? messages[code] : "Não foi possível concluir. Tente novamente.";
+}
+
+function userStatusLabel(status: string): string {
+  return (
+    { pending: "Pendente", approved: "Aprovado", blocked: "Bloqueado" }[status] ?? "Desconhecido"
+  );
+}
+
+function matchStatusLabel(status: string): string {
+  return (
+    { scheduled: "Agendada", live: "Ao vivo", finished: "Encerrada", cancelled: "Cancelada" }[
+      status
+    ] ?? "Desconhecido"
+  );
+}
+
+function jobStatusLabel(status: string): string {
+  return (
+    {
+      pending: "Pendente",
+      running: "Em execução",
+      succeeded: "Concluído",
+      failed: "Falhou",
+      dead: "Esgotado",
+    }[status] ?? "Desconhecido"
+  );
+}
+
+function jobTypeLabel(value: string): string {
+  return (
+    (
+      {
+        lineup_lock: "Bloqueio de escalações",
+        round_simulate: "Simulação da rodada",
+        round_finalize: "Finalização da rodada",
+      } as Record<string, string>
+    )[value] ?? value.replace(/[_-]+/g, " ")
+  );
+}
+
+function humanAdminLabel(value: string): string {
+  const labels: Record<string, string> = {
+    no_club: "Sem clube",
+    owner_not_approved: "Responsável não aprovado",
+    club_inactive: "Clube inativo",
+    scheduled: "Agendada",
+    active: "Ativa",
+    finished: "Encerrada",
+    locked: "Bloqueada",
+  };
+  return (
+    labels[value] ??
+    value.replace(/[_-]+/g, " ").replace(/^./, (letter) => letter.toLocaleUpperCase("pt-BR"))
+  );
 }
 
 function jobDate(value: string | null): string {
@@ -793,7 +959,7 @@ function text(value: unknown, fallback: string): string {
   return fallback;
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function AdminPageLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-[#0b0f14] px-6 py-10 text-slate-100">
       <div className="mx-auto max-w-3xl">{children}</div>

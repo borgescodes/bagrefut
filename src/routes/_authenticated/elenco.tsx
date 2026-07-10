@@ -9,6 +9,15 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PageSkeleton } from "@/components/feedback/PageStates";
+import { formatPlayerAttributeName, formatPlayStyleName } from "@/lib/display-labels";
 import { FORMATIONS, PLAY_STYLES, type Formation, type PlayStyle } from "@/domain/enums";
 import {
   buildInitialLineupDraft,
@@ -47,6 +56,16 @@ function RosterLineupPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<"roster" | "lineup">("roster");
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const workspace = useQuery({
     queryKey: ["lineupWorkspace"],
@@ -77,10 +96,10 @@ function RosterLineupPage() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!isPlayStyle(draft.style)) {
-        throw new Error("Estilo de jogo invalido.");
+        throw new Error("Estilo de jogo inválido.");
       }
       if (!validation.valid) {
-        throw new Error(validation.errors[0] ?? "Escalacao invalida.");
+        throw new Error(validation.errors[0] ?? "Escalação inválida.");
       }
       return saveFn({
         data: {
@@ -91,7 +110,7 @@ function RosterLineupPage() {
       });
     },
     onSuccess: async () => {
-      setSaveMessage("Escalacao salva com sucesso.");
+      setSaveMessage("Escalação salva com sucesso.");
       setSaveError(null);
       await queryClient.invalidateQueries({ queryKey: ["lineupWorkspace"] });
     },
@@ -109,36 +128,36 @@ function RosterLineupPage() {
 
   if (workspace.isLoading) {
     return (
-      <Shell title="Elenco e escalacao">
-        <p className="text-sm text-slate-400">Carregando elenco...</p>
-      </Shell>
+      <RosterPageLayout title="Elenco e escalação">
+        <PageSkeleton rows={4} />
+      </RosterPageLayout>
     );
   }
 
   if (workspace.error) {
     return (
-      <Shell title="Elenco e escalacao">
+      <RosterPageLayout title="Elenco e escalação">
         <p className="text-sm text-red-400">Erro ao carregar elenco.</p>
-      </Shell>
+      </RosterPageLayout>
     );
   }
 
   if (!workspace.data?.club) {
     return (
-      <Shell title="Elenco e escalacao">
-        <p className="text-sm text-slate-300">Voce ainda nao tem clube.</p>
+      <RosterPageLayout title="Elenco e escalação">
+        <p className="text-sm text-slate-300">Você ainda não tem clube.</p>
         <Link
           to="/criar-clube"
           className="mt-4 inline-flex rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-950"
         >
           Criar clube
         </Link>
-      </Shell>
+      </RosterPageLayout>
     );
   }
 
   return (
-    <Shell title="Elenco e escalacao">
+    <RosterPageLayout title="Elenco e escalação">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-slate-400">Clube</p>
@@ -155,7 +174,7 @@ function RosterLineupPage() {
 
       {!workspace.data.round && (
         <p className="mt-4 rounded-md border border-slate-800 p-3 text-sm text-slate-300">
-          Nao ha rodada ativa disponivel para salvar escalacao agora.
+          Não há rodada ativa disponível para salvar escalação agora.
         </p>
       )}
 
@@ -163,11 +182,34 @@ function RosterLineupPage() {
         {getLineupSourceNotice(workspace.data.savedLineup)}
       </p>
 
+      <div className="lineup-mobile-tabs" role="tablist" aria-label="Visualização do elenco">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileView === "roster"}
+          onClick={() => setMobileView("roster")}
+        >
+          Elenco
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileView === "lineup"}
+          onClick={() => setMobileView("lineup")}
+        >
+          Escalação
+        </button>
+      </div>
+
       {roster.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-400">Seu clube ainda nao tem jogadores.</p>
+        <p className="mt-6 text-sm text-slate-400">Seu clube ainda não tem jogadores.</p>
       ) : (
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-          <section>
+          <section
+            className={
+              mobileView === "roster" ? "lineup-roster" : "lineup-roster lineup-mobile-hidden"
+            }
+          >
             <h2 className="text-lg font-semibold">Elenco</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {roster.map((player) => (
@@ -182,7 +224,13 @@ function RosterLineupPage() {
             </div>
           </section>
 
-          <aside className="space-y-4">
+          <aside
+            className={
+              mobileView === "lineup"
+                ? "lineup-editor-column space-y-4"
+                : "lineup-editor-column lineup-mobile-hidden space-y-4"
+            }
+          >
             <LineupEditor
               draft={draft}
               roster={roster}
@@ -194,10 +242,10 @@ function RosterLineupPage() {
               <h2 className="text-base font-semibold">Salvar</h2>
               <div className="mt-3 space-y-2 text-sm">
                 {validation.valid ? (
-                  <p className="text-emerald-300">Escalacao valida.</p>
+                  <p className="text-emerald-300">Escalação válida.</p>
                 ) : (
                   <div className="text-amber-300">
-                    <p>Escalacao incompleta ou invalida.</p>
+                    <p>Escalação incompleta ou inválida.</p>
                     <ul className="mt-1 list-disc space-y-1 pl-5">
                       {validation.errors.map((error) => (
                         <li key={error}>{error}</li>
@@ -208,8 +256,16 @@ function RosterLineupPage() {
                 {submitState.reason && (
                   <p className="text-slate-400">Estado: {submitState.reason}</p>
                 )}
-                {saveMessage && <p className="text-emerald-300">{saveMessage}</p>}
-                {saveError && <p className="text-red-300">{saveError}</p>}
+                {saveMessage && (
+                  <p className="text-emerald-300" aria-live="polite">
+                    {saveMessage}
+                  </p>
+                )}
+                {saveError && (
+                  <p className="text-red-300" role="alert">
+                    {saveError}
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -217,15 +273,29 @@ function RosterLineupPage() {
                 onClick={() => saveMutation.mutate()}
                 className="mt-4 w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {saveMutation.isPending ? "Salvando..." : "Salvar escalacao"}
+                {saveMutation.isPending ? "Salvando…" : "Salvar escalação"}
               </button>
             </section>
 
-            <PlayerDetails player={selectedPlayer} draft={draft} />
+            {isDesktop && <PlayerDetails player={selectedPlayer} draft={draft} />}
           </aside>
         </div>
       )}
-    </Shell>
+      {!isDesktop && (
+        <Dialog
+          open={Boolean(selectedPlayer)}
+          onOpenChange={(open) => !open && setSelectedPlayerId(null)}
+        >
+          <DialogContent className="lineup-player-dialog">
+            <DialogHeader>
+              <DialogTitle>Detalhes do jogador</DialogTitle>
+              <DialogDescription>Atributos, posição e impacto na escalação.</DialogDescription>
+            </DialogHeader>
+            <PlayerDetails player={selectedPlayer} draft={draft} embedded />
+          </DialogContent>
+        </Dialog>
+      )}
+    </RosterPageLayout>
   );
 }
 
@@ -248,7 +318,7 @@ function LineupEditor({
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-sm">
-          <span className="block text-slate-300">Formacao</span>
+          <span className="block text-slate-300">Formação</span>
           <select
             value={draft.formation}
             onChange={(event) => {
@@ -276,7 +346,7 @@ function LineupEditor({
           >
             {PLAY_STYLES.map((style) => (
               <option key={style} value={style}>
-                {style}
+                {formatPlayStyleName(style)}
               </option>
             ))}
           </select>
@@ -456,7 +526,7 @@ function PlayerCard({
 }) {
   const slot = findStarterSlot(draft, player.clubPlayerId);
   const isReserve = draft.reserves.includes(player.clubPlayerId);
-  const state = slot ? "titular" : isReserve ? "reserva" : "fora da escalacao";
+  const state = slot ? "titular" : isReserve ? "reserva" : "fora da escalação";
   const improvised = slot ? isImprovised(player, slot.position) : false;
 
   return (
@@ -485,7 +555,7 @@ function PlayerCard({
       <dl className="mt-3 grid grid-cols-2 gap-1 text-xs text-slate-400">
         {getAttributeEntries(player).map((attribute) => (
           <div key={attribute.key} className="flex justify-between gap-2">
-            <dt>{attribute.key}</dt>
+            <dt>{formatPlayerAttributeName(attribute.key)}</dt>
             <dd>{attribute.value}</dd>
           </div>
         ))}
@@ -497,9 +567,11 @@ function PlayerCard({
 function PlayerDetails({
   player,
   draft,
+  embedded = false,
 }: {
   player: LineupRosterPlayer | null;
   draft: LineupDraft;
+  embedded?: boolean;
 }) {
   if (!player) {
     return (
@@ -515,16 +587,16 @@ function PlayerDetails({
   const chosenPosition = slot?.position ?? null;
 
   return (
-    <section className="rounded-md border border-slate-800 p-4">
-      <h2 className="text-base font-semibold">Detalhes do jogador</h2>
+    <section className={embedded ? "p-1" : "rounded-md border border-slate-800 p-4"}>
+      {!embedded && <h2 className="text-base font-semibold">Detalhes do jogador</h2>}
       <div className="mt-3 space-y-2 text-sm">
         <p>
           <b>{player.name}</b>
         </p>
-        <p>Posicao principal: {player.position}</p>
+        <p>Posição principal: {player.position}</p>
         <p>OVR base: {player.overall}</p>
-        <p>Estado: {slot ? "titular" : isReserve ? "reserva" : "fora da escalacao"}</p>
-        <p>Posicao escolhida: {chosenPosition ?? "nenhuma"}</p>
+        <p>Estado: {slot ? "titular" : isReserve ? "reserva" : "fora da escalação"}</p>
+        <p>Posição escolhida: {chosenPosition ?? "nenhuma"}</p>
         {chosenPosition ? (
           <p>
             Impacto de improviso:{" "}
@@ -535,7 +607,7 @@ function PlayerDetails({
               : `sem penalidade, OVR efetivo ${getEffectiveOverall(player, chosenPosition)}`}
           </p>
         ) : (
-          <p>Impacto de improviso: nao aplicavel.</p>
+          <p>Impacto de improviso: não aplicável.</p>
         )}
       </div>
       <div className="mt-4">
@@ -543,19 +615,19 @@ function PlayerDetails({
         <dl className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-400">
           {getAttributeEntries(player).map((attribute) => (
             <div key={attribute.key} className="flex justify-between gap-3">
-              <dt>{attribute.key}</dt>
+              <dt>{formatPlayerAttributeName(attribute.key)}</dt>
               <dd>{attribute.value}</dd>
             </div>
           ))}
         </dl>
       </div>
       <div className="mt-4">
-        <h3 className="text-sm font-medium text-slate-300">Treino / evolucao</h3>
+        <h3 className="text-sm font-medium text-slate-300">Treino / evolução</h3>
         {player.attributeProgress?.length ? (
           <ul className="mt-2 space-y-1 text-sm text-slate-400">
             {player.attributeProgress.map((progress) => (
               <li key={progress.attribute}>
-                {progress.attribute}: {progress.progress}%
+                {formatPlayerAttributeName(progress.attribute)}: {progress.progress}%
               </li>
             ))}
           </ul>
@@ -581,18 +653,18 @@ function RoundStatus({
   return (
     <section className="rounded-md border border-slate-800 p-4 text-sm">
       <h2 className="font-semibold">Rodada {round.roundNumber}</h2>
-      <p className="mt-1 text-slate-400">Inicio: {formatDateTime(round.startsAt)}</p>
-      <p className="text-slate-400">Limite de escalacao: {formatDateTime(round.lineupLockAt)}</p>
+      <p className="mt-1 text-slate-400">Início: {formatDateTime(round.startsAt)}</p>
+      <p className="text-slate-400">Limite de escalação: {formatDateTime(round.lineupLockAt)}</p>
       <p className={round.isBlocked ? "mt-2 text-red-300" : "mt-2 text-emerald-300"}>
         {round.isBlocked
-          ? "Escalacao bloqueada pelo horario limite."
-          : "Escalacao aberta para edicao."}
+          ? "Escalação bloqueada pelo horário limite."
+          : "Escalação aberta para edição."}
       </p>
     </section>
   );
 }
 
-function Shell({ title, children }: { title: string; children: ReactNode }) {
+function RosterPageLayout({ title, children }: { title: string; children: ReactNode }) {
   return (
     <main className="min-h-screen bg-[#0b0f14] px-4 py-8 text-slate-100 sm:px-6">
       <div className="mx-auto max-w-6xl">

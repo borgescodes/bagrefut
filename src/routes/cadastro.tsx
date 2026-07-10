@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { Eye, EyeOff, UserPlus } from "lucide-react";
 import { mapAuthErrorMessage } from "@/domain/rules/auth";
 import {
   usernameToInternalEmail,
@@ -8,6 +9,7 @@ import {
   validateUsername,
 } from "@/domain/rules/validators";
 import { supabase } from "@/integrations/supabase/client";
+import { PublicShell } from "@/components/public-shell/PublicShell";
 
 export const Route = createFileRoute("/cadastro")({
   component: CadastroPage,
@@ -26,9 +28,11 @@ function CadastroPage() {
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setError(null);
     const u = validateUsername(username);
     if (!u.ok) return setError(validationMessage(u.error));
@@ -50,61 +54,92 @@ function CadastroPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0b0f14] px-6 py-12 text-slate-100">
-      <div className="mx-auto max-w-md">
-        <h1 className="text-2xl font-semibold">Cadastro</h1>
-        <p className="mt-2 text-sm text-slate-400">
-          Escolha um nome único (3-16, letras e números). Aprovação é manual.
-        </p>
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <label className="block text-sm">
-            <span className="mb-1 block">Nome de usuário</span>
+    <PublicShell>
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">Novo técnico</p>
+      <h1 className="mt-2">Crie sua conta</h1>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        Use de 3 a 16 letras e números. O acesso é liberado após aprovação do administrador.
+      </p>
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <label htmlFor="signup-username" className="block text-sm">
+          <span className="mb-1 block">Nome de usuário</span>
+          <input
+            id="signup-username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full rounded-md border px-3 py-2 text-sm"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
+          />
+        </label>
+        <label htmlFor="signup-password" className="block text-sm">
+          <span className="mb-1 block">Senha</span>
+          <span className="relative block">
             <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
-              autoComplete="username"
-              required
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block">Senha (mín. 8, com letra e número)</span>
-            <input
-              type="password"
+              id="signup-password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+              className="w-full rounded-md border px-3 py-2 pr-12 text-sm"
               autoComplete="new-password"
+              aria-describedby="signup-password-help"
               required
             />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block">Confirmar senha</span>
-            <input
-              type="password"
-              value={passwordConfirmation}
-              onChange={(e) => setPasswordConfirmation(e.target.value)}
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
-              autoComplete="new-password"
-              required
-            />
-          </label>
-          {error && <p className="text-sm text-red-400">{error}</p>}
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 disabled:opacity-60"
-          >
-            {busy ? "Enviando..." : "Cadastrar"}
-          </button>
-        </form>
-        <p className="mt-4 text-sm">
-          <Link to="/login" className="underline">
-            Já tem conta? Entrar
-          </Link>
-        </p>
-      </div>
-    </main>
+            <button
+              type="button"
+              onClick={() => setShowPassword((value) => !value)}
+              className="absolute inset-y-0 right-0 grid w-12 place-items-center text-muted-foreground"
+              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            >
+              {showPassword ? (
+                <EyeOff size={18} aria-hidden="true" />
+              ) : (
+                <Eye size={18} aria-hidden="true" />
+              )}
+            </button>
+          </span>
+          <span id="signup-password-help" className="mt-1.5 block text-xs text-muted-foreground">
+            8 a 32 caracteres, com pelo menos uma letra e um número.
+          </span>
+        </label>
+        <label htmlFor="signup-confirmation" className="block text-sm">
+          <span className="mb-1 block">Confirmar senha</span>
+          <input
+            id="signup-confirmation"
+            type={showPassword ? "text" : "password"}
+            value={passwordConfirmation}
+            onChange={(e) => setPasswordConfirmation(e.target.value)}
+            className="w-full rounded-md border px-3 py-2 text-sm"
+            autoComplete="new-password"
+            required
+          />
+        </label>
+        {error && (
+          <p className="text-sm text-red-400" role="alert">
+            {error}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={busy}
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground active:scale-[.98] disabled:opacity-60"
+          aria-busy={busy}
+        >
+          <UserPlus size={18} aria-hidden="true" />
+          {busy ? "Enviando…" : "Criar conta"}
+        </button>
+      </form>
+      <p className="mt-5 text-sm text-muted-foreground">
+        <Link
+          to="/login"
+          className="font-medium text-primary underline decoration-primary/30 underline-offset-4"
+        >
+          Já tem conta? Entrar
+        </Link>
+      </p>
+    </PublicShell>
   );
 }
 

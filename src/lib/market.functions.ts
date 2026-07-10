@@ -609,7 +609,7 @@ async function callMarketRpc<T>(
   if (error) throw new Error(mapMarketErrorMessage(error));
   const parsed = resultSchema.safeParse(data);
   if (!parsed.success) {
-    throw new Error("Nao foi possivel validar a resposta do mercado.");
+    throw new Error("Não foi possível validar a resposta do mercado.");
   }
   return parsed.data;
 }

@@ -57,14 +57,15 @@ describe("playerImagePath", () => {
 });
 
 describe("displaySector", () => {
-  it("normaliza snake_case para display", () => {
-    expect(displaySector("bela_vista")).toBe("BELA VISTA");
-    expect(displaySector("cidade_nova")).toBe("CIDADE NOVA");
+  it("usa os nomes canônicos de setor", () => {
+    expect(displaySector("bela_vista")).toBe("bela vista");
+    expect(displaySector("jaderlandia")).toBe("jardela");
+    expect(displaySector("promessa")).toBe("promissão");
   });
 
-  it("aguenta espaços e hífens extras", () => {
-    expect(displaySector("  morada_do_sol ")).toBe("MORADA DO SOL");
-    expect(displaySector("paulo-sexto")).toBe("PAULO SEXTO");
+  it("delega o fallback seguro sem uppercase", () => {
+    expect(displaySector("  setor_novo ")).toBe("setor novo");
+    expect(displaySector("paulo-sexto")).toBe("paulo sexo");
   });
 });
 

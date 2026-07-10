@@ -235,22 +235,22 @@ describe("market prices and form validators", () => {
 describe("market errors and mutation safety", () => {
   it("maps roster and wallet caps to current rules", () => {
     expect(mapMarketErrorMessage(new Error("roster_maximum"))).toBe(
-      "O clube pode ter no maximo 10 cartas.",
+      "O clube pode ter no máximo 10 cartas.",
     );
     expect(mapMarketErrorMessage(new Error("wallet_balance_cap_exceeded"))).toBe(
-      "A operacao ultrapassaria o saldo maximo de R$ 999,99.",
+      "A operação ultrapassaria o saldo máximo de R$ 999,99.",
     );
   });
 
   it("maps public contract codes without exposing SQL internals", () => {
     expect(mapMarketErrorMessage(new Error("player_reserved"))).toBe(
-      "Esta carta esta reservada em outra negociacao.",
+      "Esta carta está reservada em outra negociação.",
     );
     expect(mapMarketErrorMessage(new Error("daily_training_limit"))).toBe(
-      "Seu clube ja treinou hoje. Tente novamente amanha.",
+      "Seu clube já treinou hoje. Tente novamente amanhã.",
     );
     expect(mapMarketErrorMessage(new Error("duplicate key value violates unique constraint"))).toBe(
-      "Nao foi possivel concluir a operacao de mercado.",
+      "Não foi possível concluir a operação de mercado.",
     );
   });
 
@@ -262,6 +262,11 @@ describe("market errors and mutation safety", () => {
 });
 
 describe("market query invalidation", () => {
+  it("usa uma chave própria para o workspace completo do mercado", () => {
+    expect(MARKET_QUERY_KEYS).toContain("marketWorkspace");
+    expect(MARKET_QUERY_KEYS).not.toContain("myClub");
+  });
+
   it("invalidates all workspace keys after a successful mutation", async () => {
     const invalidateQueries = vi.fn().mockResolvedValue(undefined);
     await invalidateMarketQueries({ invalidateQueries });

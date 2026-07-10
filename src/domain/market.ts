@@ -14,7 +14,7 @@ export const MAX_MARKET_PRICE_CENTS = 10_000;
 export const MAX_WALLET_CENTS = 99_999;
 
 export const MARKET_QUERY_KEYS = [
-  "myClub",
+  "marketWorkspace",
   "myRoster",
   "systemMarket",
   "p2pListings",

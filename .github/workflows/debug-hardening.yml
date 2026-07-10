@@ -1,0 +1,42 @@
+name: Debug operational hardening
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  debug:
+    if: github.head_ref == 'fix/operational-automation-hardening'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/operational-automation-hardening
+      - name: Extract and run generator
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('.github/workflows/harden-operational-automation.yml').read_text()
+          marker = "          python3 <<'PY'\n"
+          start = source.index(marker) + len(marker)
+          end = source.index("\n          PY\n", start)
+          lines = source[start:end].splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          Path('/tmp/harden.py').write_text(script)
+          PY
+          set +e
+          python3 /tmp/harden.py > /tmp/harden.log 2>&1
+          echo $? > /tmp/exit-code.txt
+          cat /tmp/harden.log
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hardening-debug
+          path: |
+            /tmp/harden.log
+            /tmp/exit-code.txt

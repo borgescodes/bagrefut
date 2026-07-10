@@ -138,7 +138,7 @@ async function callJsonRpc(
     fn: string,
     args?: Record<string, unknown>,
   ) => Promise<JsonRpcResponse>;
-  const { data, error } = await rpc(functionName, args);
+  const { data, error } = await rpc(functionName, args ?? {});
   if (error) throw new Error(error.message);
   return data;
 }

@@ -128,3 +128,11 @@ FROM public.operational_job_runs
 ORDER BY created_at DESC
 LIMIT 50;
 ```
+
+## Contrato dos cores internos
+
+Os cores `_match_simulate_internal`, `_round_simulate_internal`,
+`_round_finalize_internal` e `_season_finish_internal` possuem definições SQL
+explícitas na migration. A instalação não deriva código via catálogo PostgreSQL.
+A ausência ou falha de configuração do `pg_cron` não reverte a camada operacional;
+o endpoint interno permanece como scheduler alternativo.

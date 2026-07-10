@@ -47,6 +47,25 @@ Testes SQL em `supabase/tests/database/*.sql` sao executados manualmente no SQL
 Editor Lovable: primeiro a migration, depois o teste SQL, mantendo
 transacao/rollback quando o teste tiver esse preparo.
 
+## Mercado utilizável
+
+1. Aplique `supabase/migrations/20260710120000_usable_market.sql` pelo fluxo de
+   migrations do Lovable/Supabase. Não altere migrations anteriores já aplicadas.
+2. Em ambiente de teste, execute
+   `supabase/tests/database/usable_market.sql` completo. Preserve `BEGIN` e
+   `ROLLBACK`; confirme `NOTICE: usable_market contract test passed`.
+3. Regere os tipos somente depois da migration existir no banco:
+
+```powershell
+supabase gen types typescript --project-id <PROJECT_ID> --schema public |
+  Set-Content -Encoding utf8 src/integrations/supabase/types.ts
+```
+
+Para Supabase local iniciado, troque `--project-id <PROJECT_ID>` por `--local`.
+Rode `bun run check` após regenerar. Até essa regeneração, os RPCs novos ficam
+centralizados em um único helper com cast controlado e validação Zod; não espalhe
+casts pelo frontend.
+
 ## Cron / rodadas automaticas
 
 O processamento usa um unico job por minuto:

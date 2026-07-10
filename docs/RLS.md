@@ -31,9 +31,9 @@ migrations corretivas:
 | `lineup_players`                 | Approved: própria/admin/liberada                       | Nenhum; só `save_lineup`       |
 | `training_sessions`              | Approved: próprios treinos; admin lê tudo              | Nenhum; só `train_club_player` |
 | `club_player_attribute_progress` | Approved: progresso das próprias cartas; admin lê tudo | Nenhum; só RPC                 |
-| `market_listings`                | Apenas approved                                        | Nenhum; só RPC pendente        |
-| `transfer_offers`                | Approved: ofertas próprias; admin lê tudo              | Nenhum; só RPC pendente        |
-| `transfer_offer_items`           | Approved: itens de ofertas próprias                    | Nenhum                         |
+| `market_listings`                | Apenas approved; RPC pública expõe somente `open`      | Nenhum; só RPCs de mercado     |
+| `transfer_offers`                | Approved: ofertas próprias; admin lê tudo              | Nenhum; só RPCs de oferta      |
+| `transfer_offer_items`           | Approved: itens de ofertas próprias                    | Nenhum; só RPCs de oferta      |
 | `push_subscriptions`             | Approved: próprias; admin lê tudo                      | Approved gerencia próprias     |
 | `admin_audit_logs`               | Apenas admin approved                                  | Nenhum; só funções seguras     |
 | `operational_job_runs`           | Nenhum direto; admin via RPC                           | Nenhum; service_role apenas    |
@@ -99,6 +99,17 @@ Todas seguem o padrão obrigatório:
 | `public.sell_player_to_system(club_player_id)`         | authenticated | Vende carta ao sistema                     |
 | `public.buy_player_from_system(club_player_id)`        | authenticated | Compra carta do sistema                    |
 | `public.train_club_player(club_player_id, attr)`       | authenticated | Executa treino diário                      |
+| `public.list_market_listings(...)`                     | authenticated | Lista anúncios abertos filtrados           |
+| `public.create_market_listing(card,price)`             | authenticated | Cria anúncio e reserva carta               |
+| `public.cancel_market_listing(listing)`                | authenticated | Cancela anúncio do vendedor                |
+| `public.buy_market_listing(listing)`                   | authenticated | Compra P2P com dois ledgers                |
+| `public.list_my_transfer_offers()`                     | authenticated | Lista ofertas recebidas/enviadas           |
+| `public.create_transfer_offer(...)`                    | authenticated | Cria oferta e reserva todas as cartas      |
+| `public.accept_transfer_offer(offer)`                  | authenticated | Executa troca e cash atomicamente          |
+| `public.reject_transfer_offer(offer)`                  | authenticated | Rejeita e libera reservas                  |
+| `public.cancel_transfer_offer(offer)`                  | authenticated | Cancela e libera reservas                  |
+| `public.list_trade_targets()`                          | authenticated | Lista clubes elegíveis para troca          |
+| `public.get_trade_target_roster(club)`                 | authenticated | Lista cartas elegíveis do destinatário     |
 | `public.admin_set_user_status(target,status,reason)`   | authenticated | Atualiza status e grava auditoria          |
 | `public.list_season_club_eligibility(include_private)` | authenticated | Lista elegibilidade pública/admin          |
 | `public.get_season_operational_state()`                | authenticated | Estado operacional da temporada            |
@@ -115,6 +126,7 @@ Todas seguem o padrão obrigatório:
 | `public.admin_list_operational_job_runs(limit,status)` | authenticated | Admin consulta ultimas execucoes           |
 | `public.process_due_rounds(now)`                       | service_role  | Processa etapas operacionais vencidas      |
 | `public._operational_retry_job_run(job_run)`           | service_role  | Reenfileira failed/dead preservando result |
+| `public._expire_transfer_offers(now)`                  | service_role  | Expira ofertas e libera cartas             |
 
 Funções puras auxiliares, como `calculate_player_overall`,
 `calculate_reference_value_cents` e `training_cost_cents`, também usam

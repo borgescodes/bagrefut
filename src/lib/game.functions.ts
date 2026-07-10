@@ -2,8 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { systemBuyPriceCents, systemSellPriceCents } from "@/domain/calculators/prices";
-import { PLAYER_ATTRIBUTE_KEYS } from "@/domain/enums";
 import type {
   JsonValue,
   MatchDetails,
@@ -13,6 +11,14 @@ import type {
 } from "@/domain/types";
 import type { Database } from "@/integrations/supabase/types";
 import { canRequestMatchEvents } from "@/lib/match-access";
+
+export {
+  buyPlayerFromSystem,
+  getMyRoster,
+  listSystemMarketStock,
+  sellPlayerToSystem,
+  trainClubPlayer,
+} from "@/lib/market.functions";
 
 /**
  * Returns the current user's profile (id, username, status) and roles.
@@ -100,139 +106,6 @@ export const openInitialPack = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { items: items ?? [] };
-  });
-
-export const getMyRoster = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("club_players")
-      .select(
-        `
-        id,
-        club_id,
-        player_id,
-        acquired_at,
-        is_reserved,
-        players (
-          id,
-          code,
-          name,
-          position,
-          rarity,
-          sector,
-          overall,
-          velocity,
-          finishing,
-          passing,
-          dribbling,
-          defending,
-          physical,
-          goalkeeping,
-          reference_value_cents
-        ),
-        club_player_attribute_progress (
-          attribute,
-          progress,
-          updated_at
-        )
-      `,
-      )
-      .order("acquired_at", { ascending: true });
-
-    if (error) throw new Error(error.message);
-    return data ?? [];
-  });
-
-export const listSystemMarketStock = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("system_market_stock")
-      .select(
-        `
-        club_player_id,
-        acquired_from_club_id,
-        acquired_price_cents,
-        acquired_at,
-        club_players (
-          id,
-          club_id,
-          player_id,
-          acquired_at,
-          is_reserved,
-          players (
-            id,
-            code,
-            name,
-            position,
-            rarity,
-            sector,
-            overall,
-            velocity,
-            finishing,
-            passing,
-            dribbling,
-            defending,
-            physical,
-            goalkeeping,
-            reference_value_cents
-          )
-        )
-      `,
-      )
-      .order("acquired_at", { ascending: true });
-
-    if (error) throw new Error(error.message);
-    return (data ?? []).map((stock) => {
-      const player = stock.club_players?.players;
-      const reference = player?.reference_value_cents ?? 0;
-      return {
-        ...stock,
-        buyPriceCents: systemSellPriceCents(reference),
-        sellPriceCents: systemBuyPriceCents(reference),
-      };
-    });
-  });
-
-const clubPlayerInput = z.object({ clubPlayerId: z.string().uuid() });
-
-export const buyPlayerFromSystem = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((data: unknown) => clubPlayerInput.parse(data))
-  .handler(async ({ data, context }) => {
-    const { data: result, error } = await context.supabase.rpc("buy_player_from_system", {
-      _club_player_id: data.clubPlayerId,
-    });
-    if (error) throw new Error(error.message);
-    return { result: result?.[0] ?? null };
-  });
-
-export const sellPlayerToSystem = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((data: unknown) => clubPlayerInput.parse(data))
-  .handler(async ({ data, context }) => {
-    const { data: result, error } = await context.supabase.rpc("sell_player_to_system", {
-      _club_player_id: data.clubPlayerId,
-    });
-    if (error) throw new Error(error.message);
-    return { result: result?.[0] ?? null };
-  });
-
-const trainClubPlayerInput = clubPlayerInput.extend({
-  attribute: z.enum(PLAYER_ATTRIBUTE_KEYS),
-});
-
-export const trainClubPlayer = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((data: unknown) => trainClubPlayerInput.parse(data))
-  .handler(async ({ data, context }) => {
-    const { data: result, error } = await context.supabase.rpc("train_club_player", {
-      _club_player_id: data.clubPlayerId,
-      _attribute: data.attribute,
-    });
-    if (error) throw new Error(error.message);
-    return { result: result?.[0] ?? null };
   });
 
 /** Returns the caller's club (if any). */

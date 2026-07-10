@@ -15,6 +15,7 @@ import { Route as AguardandoAprovacaoRouteImport } from './routes/aguardando-apr
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTrocarSenhaRouteImport } from './routes/_authenticated/trocar-senha'
+import { Route as AuthenticatedMercadoRouteImport } from './routes/_authenticated/mercado'
 import { Route as AuthenticatedElencoRouteImport } from './routes/_authenticated/elenco'
 import { Route as AuthenticatedCriarClubeRouteImport } from './routes/_authenticated/criar-clube'
 import { Route as AuthenticatedClassificacaoRouteImport } from './routes/_authenticated/classificacao'
@@ -54,6 +55,11 @@ const AuthenticatedTrocarSenhaRoute =
     path: '/trocar-senha',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedMercadoRoute = AuthenticatedMercadoRouteImport.update({
+  id: '/mercado',
+  path: '/mercado',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedElencoRoute = AuthenticatedElencoRouteImport.update({
   id: '/elenco',
   path: '/elenco',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/classificacao': typeof AuthenticatedClassificacaoRoute
   '/criar-clube': typeof AuthenticatedCriarClubeRoute
   '/elenco': typeof AuthenticatedElencoRoute
+  '/mercado': typeof AuthenticatedMercadoRoute
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
   '/api/internal/jobs/process-due-rounds': typeof ApiInternalJobsProcessDueRoundsRoute
   '/api/internal/jobs/retry': typeof ApiInternalJobsRetryRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/classificacao': typeof AuthenticatedClassificacaoRoute
   '/criar-clube': typeof AuthenticatedCriarClubeRoute
   '/elenco': typeof AuthenticatedElencoRoute
+  '/mercado': typeof AuthenticatedMercadoRoute
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
   '/api/internal/jobs/process-due-rounds': typeof ApiInternalJobsProcessDueRoundsRoute
   '/api/internal/jobs/retry': typeof ApiInternalJobsRetryRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/_authenticated/classificacao': typeof AuthenticatedClassificacaoRoute
   '/_authenticated/criar-clube': typeof AuthenticatedCriarClubeRoute
   '/_authenticated/elenco': typeof AuthenticatedElencoRoute
+  '/_authenticated/mercado': typeof AuthenticatedMercadoRoute
   '/_authenticated/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
   '/api/internal/jobs/process-due-rounds': typeof ApiInternalJobsProcessDueRoundsRoute
   '/api/internal/jobs/retry': typeof ApiInternalJobsRetryRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/classificacao'
     | '/criar-clube'
     | '/elenco'
+    | '/mercado'
     | '/trocar-senha'
     | '/api/internal/jobs/process-due-rounds'
     | '/api/internal/jobs/retry'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/classificacao'
     | '/criar-clube'
     | '/elenco'
+    | '/mercado'
     | '/trocar-senha'
     | '/api/internal/jobs/process-due-rounds'
     | '/api/internal/jobs/retry'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/_authenticated/classificacao'
     | '/_authenticated/criar-clube'
     | '/_authenticated/elenco'
+    | '/_authenticated/mercado'
     | '/_authenticated/trocar-senha'
     | '/api/internal/jobs/process-due-rounds'
     | '/api/internal/jobs/retry'
@@ -246,6 +258,13 @@ declare module '@tanstack/react-router' {
       path: '/trocar-senha'
       fullPath: '/trocar-senha'
       preLoaderRoute: typeof AuthenticatedTrocarSenhaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/mercado': {
+      id: '/_authenticated/mercado'
+      path: '/mercado'
+      fullPath: '/mercado'
+      preLoaderRoute: typeof AuthenticatedMercadoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/elenco': {
@@ -314,6 +333,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedClassificacaoRoute: typeof AuthenticatedClassificacaoRoute
   AuthenticatedCriarClubeRoute: typeof AuthenticatedCriarClubeRoute
   AuthenticatedElencoRoute: typeof AuthenticatedElencoRoute
+  AuthenticatedMercadoRoute: typeof AuthenticatedMercadoRoute
   AuthenticatedTrocarSenhaRoute: typeof AuthenticatedTrocarSenhaRoute
 }
 
@@ -324,6 +344,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedClassificacaoRoute: AuthenticatedClassificacaoRoute,
   AuthenticatedCriarClubeRoute: AuthenticatedCriarClubeRoute,
   AuthenticatedElencoRoute: AuthenticatedElencoRoute,
+  AuthenticatedMercadoRoute: AuthenticatedMercadoRoute,
   AuthenticatedTrocarSenhaRoute: AuthenticatedTrocarSenhaRoute,
 }
 
@@ -342,3 +363,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

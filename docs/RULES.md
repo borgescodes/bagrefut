@@ -61,6 +61,28 @@ Média ponderada por posição. Pesos somam 100:
 - O custo é cobrado mesmo quando o treino ainda não gera `+1`.
 - Atributo máximo: 99.
 
+## Mercado P2P e ofertas
+
+- Anúncios aceitam preço entre 1 e 10.000 cents e expõem somente status `open`
+  na listagem pública.
+- Criar anúncio reserva a carta na mesma transação; cancelar libera a reserva;
+  comprar transfere a carta permanente por `UPDATE club_players.club_id`.
+- Compra P2P debita o comprador como `market_purchase` e credita o vendedor como
+  `market_sale`, ambos referenciando o mesmo `market_listings.id`.
+- Oferta aceita no máximo 5 cartas por lado. `cash_cents` é pago por `from_club`
+  para `to_club` e usa `transfer_cash` no ledger dos dois clubes.
+- Anúncios e ofertas preservam elencos entre 5 e 15 cartas e saldo entre 0 e
+  10.000 cents.
+- Cartas em anúncio ou oferta pendente usam `is_reserved = true` e não podem ser
+  vendidas, treinadas, escaladas nem reutilizadas em outra negociação.
+- Aceite transfere todas as cartas e o dinheiro atomicamente; falha não deixa
+  transferência parcial.
+- Aceite, rejeição e cancelamento são idempotentes para o respectivo estado
+  final. Ofertas vencidas mudam para `expired` e liberam as cartas.
+- Locks de anúncio/oferta, clubes e cartas, com ordem UUID estável, impedem saldo,
+  ledger ou propriedade duplicados em concorrência.
+- Contrato completo: `docs/MARKET.md`.
+
 ## Multiplicador de improviso
 
 - Posição natural = slot: **1.0**

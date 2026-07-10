@@ -98,7 +98,7 @@ export async function saveLineupRpc(
 
   const row = data?.[0];
   if (!row?.lineup_id || !row.club_id || !row.round_id || !row.saved_at) {
-    throw new Error("Nao foi possivel confirmar o salvamento da escalacao.");
+    throw new Error("Não foi possível confirmar o salvamento da escalação.");
   }
 
   return {
@@ -124,36 +124,36 @@ export function mapSaveLineupErrorMessage(error: unknown): string {
         ? error.message
         : String(error);
   if (message.includes("lineup_locked")) {
-    return "O prazo para editar a escalacao desta rodada ja encerrou.";
+    return "O prazo para editar a escalação desta rodada já encerrou.";
   }
   if (message.includes("duplicate_club_player")) {
-    return "O mesmo jogador nao pode aparecer duas vezes.";
+    return "O mesmo jogador não pode aparecer duas vezes.";
   }
   if (message.includes("formation_slot_mismatch")) {
-    return "A formacao escolhida nao bate com as posicoes preenchidas.";
+    return "A formação escolhida não bate com as posições preenchidas.";
   }
   if (message.includes("invalid_starter_count") || message.includes("invalid_player_count")) {
-    return "A escalacao precisa ter 5 titulares e ate 5 reservas.";
+    return "A escalação precisa ter 5 titulares e até 5 reservas.";
   }
   if (message.includes("club_player_not_owned")) {
-    return "A escalacao contem jogador que nao pertence ao seu clube.";
+    return "A escalação contém jogador que não pertence ao seu clube.";
   }
   if (message.includes("club_player_reserved")) {
-    return "Um jogador selecionado esta reservado em outra operacao.";
+    return "Um jogador selecionado está reservado em outra operação.";
   }
   if (message.includes("round_not_found") || message.includes("season_not_active")) {
-    return "Nao ha rodada ativa disponivel para salvar escalacao.";
+    return "Não há rodada ativa disponível para salvar escalação.";
   }
   if (message.includes("club_not_found")) {
-    return "Crie um clube antes de salvar a escalacao.";
+    return "Crie um clube antes de salvar a escalação.";
   }
   if (message.includes("profile_not_approved")) {
-    return "Sua conta ainda nao esta aprovada para salvar escalacao.";
+    return "Sua conta ainda não está aprovada para salvar escalação.";
   }
   if (message.includes("unauthenticated")) {
-    return "Entre novamente para salvar a escalacao.";
+    return "Entre novamente para salvar a escalação.";
   }
-  return "Nao foi possivel salvar a escalacao.";
+  return "Não foi possível salvar a escalação.";
 }
 
 export const getLineupWorkspace = createServerFn({ method: "GET" })
@@ -327,7 +327,7 @@ async function loadSavedLineup(
 function toRosterPlayer(row: RosterRow): LineupRosterPlayer {
   const player = row.players;
   if (!player) {
-    throw new Error("Jogador do elenco nao encontrado.");
+    throw new Error("Jogador do elenco não encontrado.");
   }
   const rosterPlayer: LineupRosterPlayer = {
     clubPlayerId: row.id,

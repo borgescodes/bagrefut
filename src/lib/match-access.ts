@@ -23,16 +23,16 @@ export function shouldFetchMatchEvents(input: MatchEventAccessInput): boolean {
 export function mapMatchEventsErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes("match_events_forbidden")) {
-    return "Eventos detalhados disponiveis somente para partidas do seu clube.";
+    return "Eventos detalhados disponíveis somente para partidas do seu clube.";
   }
   if (message.includes("profile_not_approved")) {
-    return "Sua conta ainda nao esta aprovada para ver partidas.";
+    return "Sua conta ainda não está aprovada para ver partidas.";
   }
   if (message.includes("match_not_found")) {
-    return "Partida nao encontrada.";
+    return "Partida não encontrada.";
   }
   if (message.includes("unauthenticated")) {
     return "Entre novamente para ver partidas.";
   }
-  return "Nao foi possivel carregar os eventos da partida.";
+  return "Não foi possível carregar os eventos da partida.";
 }

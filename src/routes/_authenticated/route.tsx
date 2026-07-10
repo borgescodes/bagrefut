@@ -1,5 +1,6 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useLocation } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { AppShell } from "@/components/app-shell/AppShell";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -14,5 +15,15 @@ export const Route = createFileRoute("/_authenticated")({
     }
     return { user: data.user };
   },
-  component: () => <Outlet />,
+  component: AuthenticatedLayout,
 });
+
+function AuthenticatedLayout() {
+  const pathname = useLocation({ select: (location) => location.pathname });
+  if (pathname === "/abrir-pacote" || pathname === "/trocar-senha") return <Outlet />;
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
+}

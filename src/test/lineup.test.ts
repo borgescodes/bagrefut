@@ -82,7 +82,7 @@ describe("lineup validation", () => {
     const result = validateLineupDraft(draft, roster);
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Preencha a posicao ATA 1.");
+    expect(result.errors).toContain("Preencha a posição ATA 1.");
   });
 
   it("rejects duplicated players across starters and reserves", () => {
@@ -92,7 +92,7 @@ describe("lineup validation", () => {
     const result = validateLineupDraft(draft, roster);
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain("O mesmo jogador nao pode aparecer duas vezes.");
+    expect(result.errors).toContain("O mesmo jogador não pode aparecer duas vezes.");
   });
 
   it("rejects unsupported styles before saving", () => {
@@ -142,7 +142,7 @@ describe("lineup persisted state", () => {
   });
 
   it("shows the automatic lineup warning when there is no manual lineup", () => {
-    expect(getLineupSourceNotice(null)).toContain("escalacao automatica");
+    expect(getLineupSourceNotice(null)).toContain("escalação automática");
   });
 
   it("distinguishes automatic lineups exposed by the backend", () => {

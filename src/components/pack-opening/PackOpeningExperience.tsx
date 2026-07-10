@@ -134,6 +134,7 @@ export function PackOpeningExperience() {
       void queryClient.invalidateQueries({ queryKey: ["initialPackExperience"] });
       void queryClient.invalidateQueries({ queryKey: ["myRoster"] });
       void queryClient.invalidateQueries({ queryKey: ["marketWorkspace"] });
+      void queryClient.invalidateQueries({ queryKey: ["lineupWorkspace"] });
       dispatch({ type: "OPEN_SUCCEEDED", totalCards: result.cards.length });
     },
     onError: (error: unknown) => {

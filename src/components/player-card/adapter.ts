@@ -1,4 +1,5 @@
 import type { DatabasePlayerRecord, PlayerCardData, PlayerCardStat } from "./types";
+import { formatSectorName } from "@/lib/display-labels";
 
 const STAT_MIN = 0;
 const STAT_MAX = 99;
@@ -73,9 +74,9 @@ export function playerImagePath(playerId: string): string {
   return `/players/${normalizePlayerId(playerId)}.webp`;
 }
 
-/** bela_vista → BELA VISTA (somente display; valor do banco fica intacto). */
+/** Formata somente para display; o valor persistido fica intacto. */
 export function displaySector(sector: string): string {
-  return sector.trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ").toLocaleUpperCase("pt-BR");
+  return formatSectorName(sector);
 }
 
 /**

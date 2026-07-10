@@ -26,6 +26,7 @@ import {
   type TransferOfferSummary,
 } from "@/domain/market";
 import { PLAYER_ATTRIBUTE_KEYS, PLAYER_SECTORS } from "@/domain/enums";
+import { formatPlayerAttributeName, formatSectorName } from "@/lib/display-labels";
 import type { PlayerAttributeKey } from "@/domain/enums";
 import {
   acceptTransferOffer,
@@ -55,6 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/mercado")({
   component: MarketPage,
@@ -87,7 +89,7 @@ function MarketPage() {
   );
 
   const workspace = useQuery({
-    queryKey: ["myClub"],
+    queryKey: ["marketWorkspace"],
     queryFn: () => workspaceFn(),
   });
   const listings = useQuery({
@@ -107,7 +109,11 @@ function MarketPage() {
   });
 
   async function refreshMarket() {
-    await invalidateMarketQueries(queryClient);
+    await Promise.all([
+      invalidateMarketQueries(queryClient),
+      queryClient.invalidateQueries({ queryKey: ["appShell", "myClub"] }),
+      queryClient.invalidateQueries({ queryKey: ["myClub"] }),
+    ]);
   }
 
   function reportSuccess(text: string) {
@@ -119,26 +125,31 @@ function MarketPage() {
   }
 
   if (workspace.isLoading) {
-    return <MarketShell loadingMessage="Carregando elenco, mercado e saldo..." />;
+    return <MarketPageLayout loadingMessage="Carregando elenco, mercado e saldo…" />;
   }
   if (workspace.error) {
-    return <MarketShell errorMessage={readableMarketError(workspace.error)} />;
+    return (
+      <MarketPageLayout
+        errorMessage={readableMarketError(workspace.error)}
+        onRetry={() => void workspace.refetch()}
+      />
+    );
   }
   if (!workspace.data?.club) {
     return (
-      <MarketShell>
+      <MarketPageLayout>
         <EmptyState text="Crie um clube antes de usar o mercado e o treino." />
         <Link to="/criar-clube" className="mt-4 inline-flex min-h-11 items-center underline">
           Criar clube
         </Link>
-      </MarketShell>
+      </MarketPageLayout>
     );
   }
 
   const { club, roster, systemMarket } = workspace.data;
 
   return (
-    <MarketShell>
+    <MarketPageLayout>
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm text-slate-400">
@@ -249,7 +260,7 @@ function MarketPage() {
           />
         )}
       </section>
-    </MarketShell>
+    </MarketPageLayout>
   );
 }
 
@@ -865,6 +876,7 @@ function CreateOfferForm(props: {
   const [ownCards, setOwnCards] = useState<string[]>([]);
   const [targetCards, setTargetCards] = useState<string[]>([]);
   const [cash, setCash] = useState("0");
+  const [step, setStep] = useState(1);
   const expiresAt = useMemo(() => new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), []);
 
   const selectedTarget = props.targets.find((target) => target.clubId === targetId) ?? null;
@@ -905,6 +917,7 @@ function CreateOfferForm(props: {
       setOwnCards([]);
       setTargetCards([]);
       setCash("0");
+      setStep(1);
       props.reportSuccess("Oferta criada. Cartas envolvidas ficaram reservadas.");
       await props.refreshMarket();
     },
@@ -927,33 +940,44 @@ function CreateOfferForm(props: {
         }
       }}
     >
-      <label className="block text-sm">
-        <span className="text-slate-300">Clube destinatário</span>
-        <select
-          value={targetId}
-          disabled={props.targetsLoading || mutation.isPending}
-          onChange={(event) => {
-            setTargetId(event.target.value);
-            setTargetCards([]);
-          }}
-          className={inputClass}
-        >
-          <option value="">Selecionar clube</option>
-          {props.targets.map((target) => (
-            <option key={target.clubId} value={target.clubId}>
-              {target.name} ({target.abbreviation}) · {target.rosterSize}/{MAX_ROSTER_SIZE}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="trade-stepper" aria-label={`Etapa ${step} de 6`}>
+        {Array.from({ length: 6 }, (_, index) => (
+          <span key={index} data-active={index + 1 <= step || undefined} />
+        ))}
+        <p>Etapa {step} de 6</p>
+      </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      {step === 1 && (
+        <label className="block text-sm">
+          <span className="text-slate-300">Clube destinatário</span>
+          <select
+            value={targetId}
+            disabled={props.targetsLoading || mutation.isPending}
+            onChange={(event) => {
+              setTargetId(event.target.value);
+              setTargetCards([]);
+            }}
+            className={inputClass}
+          >
+            <option value="">Selecionar clube</option>
+            {props.targets.map((target) => (
+              <option key={target.clubId} value={target.clubId}>
+                {target.name} ({target.abbreviation}) · {target.rosterSize}/{MAX_ROSTER_SIZE}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      {step === 2 && (
         <CardSelection
           title="Minhas cartas oferecidas"
           cards={eligibleOwnCards}
           selected={ownCards}
           onToggle={(cardId) => setOwnCards(toggleCard(ownCards, cardId))}
         />
+      )}
+      {step === 3 && (
         <CardSelection
           title="Cartas solicitadas ao outro clube"
           cards={targetRoster.data ?? []}
@@ -962,52 +986,107 @@ function CreateOfferForm(props: {
           error={targetRoster.error}
           onToggle={(cardId) => setTargetCards(toggleCard(targetCards, cardId))}
         />
-      </div>
+      )}
 
-      <label className="block max-w-xs text-sm">
-        <span className="text-slate-300">Dinheiro pago ao destinatário (centavos)</span>
-        <input
-          type="number"
-          min={0}
-          max={MAX_MARKET_PRICE_CENTS}
-          value={cash}
-          onChange={(event) => setCash(event.target.value)}
-          className={inputClass}
-        />
-      </label>
+      {step === 4 && (
+        <label className="block max-w-xs text-sm">
+          <span className="text-slate-300">Dinheiro pago ao destinatário (centavos)</span>
+          <input
+            type="number"
+            min={0}
+            max={MAX_MARKET_PRICE_CENTS}
+            value={cash}
+            onChange={(event) => setCash(event.target.value)}
+            className={inputClass}
+          />
+        </label>
+      )}
 
-      <div className="grid gap-3 rounded-md border border-slate-900 p-3 text-sm sm:grid-cols-3">
-        <Info
-          label="Meu elenco após"
-          value={projection ? String(projection.fromRosterSize) : "-"}
-        />
-        <Info
-          label="Elenco destinatário após"
-          value={projection ? String(projection.toRosterSize) : "-"}
-        />
-        <Info label="Meu saldo após" value={formatMarketPrice(projectedBalance)} />
-      </div>
+      {(step === 5 || step === 6) && (
+        <div className="space-y-4">
+          <div className="trade-review-grid">
+            <div>
+              <span>Cartas que saem</span>
+              <strong>{ownCards.length || "Nenhuma"}</strong>
+              <p>
+                {eligibleOwnCards
+                  .filter((card) => ownCards.includes(card.clubPlayerId))
+                  .map((card) => card.name)
+                  .join(", ") || "Nenhuma carta"}
+              </p>
+            </div>
+            <div>
+              <span>Cartas que entram</span>
+              <strong>{targetCards.length || "Nenhuma"}</strong>
+              <p>
+                {(targetRoster.data ?? [])
+                  .filter((card) => targetCards.includes(card.clubPlayerId))
+                  .map((card) => card.name)
+                  .join(", ") || "Nenhuma carta"}
+              </p>
+            </div>
+            <div>
+              <span>Dinheiro</span>
+              <strong>{formatMarketPrice(Number(cash) || 0)}</strong>
+              <p>Pago para {selectedTarget?.name ?? "o clube escolhido"}</p>
+            </div>
+          </div>
+          <div className="grid gap-3 rounded-md border border-slate-900 p-3 text-sm sm:grid-cols-3">
+            <Info
+              label="Meu elenco após"
+              value={projection ? String(projection.fromRosterSize) : "-"}
+            />
+            <Info
+              label="Elenco destinatário após"
+              value={projection ? String(projection.toRosterSize) : "-"}
+            />
+            <Info label="Meu saldo após" value={formatMarketPrice(projectedBalance)} />
+          </div>
 
-      {projection && !projection.isValid && (
+          <p className="text-xs text-slate-400">
+            Expira em 24 horas. Máximo de 5 cartas de cada lado e R$ 100,00 em dinheiro.
+          </p>
+        </div>
+      )}
+
+      {(step === 5 || step === 6) && projection && !projection.isValid && (
         <p className="text-sm text-amber-300">
           Ambos os elencos precisam terminar entre {MIN_ROSTER_SIZE} e {MAX_ROSTER_SIZE} cartas.
         </p>
       )}
-      {projectedBalance < 0 && (
+      {(step === 5 || step === 6) && projectedBalance < 0 && (
         <p className="text-sm text-amber-300">Saldo insuficiente para esta oferta.</p>
       )}
 
-      <p className="text-xs text-slate-400">
-        Expira em 24 horas. Máximo de 5 cartas de cada lado e R$ 100,00 em dinheiro.
-      </p>
-
-      <button
-        type="submit"
-        disabled={!canSubmit || mutation.isPending}
-        className={primaryButtonClass}
-      >
-        {mutation.isPending ? "Criando oferta..." : "Confirmar oferta"}
-      </button>
+      <div className="trade-step-actions">
+        {step > 1 && (
+          <button
+            type="button"
+            className={secondaryButtonClass}
+            onClick={() => setStep((value) => Math.max(1, value - 1))}
+          >
+            Voltar
+          </button>
+        )}
+        {step < 6 ? (
+          <button
+            type="button"
+            className={primaryButtonClass}
+            disabled={step === 1 && !targetId}
+            onClick={() => setStep((value) => Math.min(6, value + 1))}
+          >
+            {step === 5 ? "Ir para envio" : "Continuar"}
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!canSubmit || mutation.isPending}
+            className={primaryButtonClass}
+          >
+            {mutation.isPending ? "Enviando…" : "Enviar oferta"}
+          </button>
+        )}
+      </div>
     </form>
   );
 }
@@ -1351,10 +1430,11 @@ function ConfirmDialog(props: {
   );
 }
 
-function MarketShell(props: {
+function MarketPageLayout(props: {
   children?: ReactNode;
   loadingMessage?: string;
   errorMessage?: string;
+  onRetry?: () => void;
 }) {
   return (
     <main className="min-h-screen bg-[#0b0f14] px-4 py-8 text-slate-100 sm:px-6">
@@ -1365,7 +1445,7 @@ function MarketShell(props: {
         {props.loadingMessage ? (
           <LoadingState text={props.loadingMessage} />
         ) : props.errorMessage ? (
-          <ErrorState text={props.errorMessage} />
+          <ErrorState text={props.errorMessage} onRetry={props.onRetry} />
         ) : (
           <div className="mt-2">{props.children}</div>
         )}
@@ -1385,9 +1465,12 @@ function SectionHeading({ title, description }: { title: string; description: st
 
 function LoadingState({ text }: { text: string }) {
   return (
-    <p className="mt-6 animate-pulse rounded-md border border-slate-800 p-4 text-sm text-slate-400">
-      {text}
-    </p>
+    <div className="mt-6 grid gap-3" aria-busy="true" aria-label={text}>
+      <Skeleton className="h-8 w-52" />
+      <Skeleton className="h-24 w-full" />
+      <Skeleton className="h-24 w-full" />
+      <span className="sr-only">{text}</span>
+    </div>
   );
 }
 
@@ -1397,11 +1480,16 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
-function ErrorState({ text }: { text: string }) {
+function ErrorState({ text, onRetry }: { text: string; onRetry?: () => void }) {
   return (
-    <p role="alert" className="mt-6 rounded-md border border-red-800 p-4 text-sm text-red-300">
-      {text}
-    </p>
+    <div role="alert" className="mt-6 rounded-md border border-red-800 p-4 text-sm text-red-300">
+      <p>{text}</p>
+      {onRetry && (
+        <button type="button" className="mt-3 min-h-11 underline" onClick={onRetry}>
+          Tentar novamente
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -1455,16 +1543,7 @@ function readableMarketError(error: unknown): string {
 }
 
 function attributeLabel(attribute: PlayerAttributeKey): string {
-  const labels: Record<PlayerAttributeKey, string> = {
-    velocity: "Velocidade",
-    finishing: "Finalização",
-    passing: "Passe",
-    dribbling: "Drible",
-    defending: "Defesa",
-    physical: "Físico",
-    goalkeeping: "Goleiro",
-  };
-  return labels[attribute];
+  return formatPlayerAttributeName(attribute);
 }
 
 function rarityLabel(rarity: MarketCardSummary["rarity"]): string {
@@ -1472,10 +1551,7 @@ function rarityLabel(rarity: MarketCardSummary["rarity"]): string {
 }
 
 function sectorLabel(sector: MarketCardSummary["sector"]): string {
-  return sector
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  return formatSectorName(sector);
 }
 
 function offerStatusLabel(status: TransferOfferSummary["status"]): string {

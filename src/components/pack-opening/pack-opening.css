@@ -747,3 +747,55 @@
     transition: none;
   }
 }
+
+/* Integração com a identidade dark-first do aplicativo. */
+.pack-stage {
+  padding-top: calc(1.5rem + var(--safe-top, 0px));
+  padding-bottom: calc(2rem + var(--safe-bottom, 0px));
+  background: var(--background, #11151a);
+  color: var(--foreground, #f1f5f2);
+}
+
+.pack-body {
+  border-color: var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--surface, #1a2025);
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.28);
+}
+
+.pack-crest {
+  color: var(--primary, #65d46e);
+  text-shadow: none;
+}
+
+.pack-label,
+.pack-hint,
+.pack-counter__remaining {
+  color: var(--muted-foreground, #94a3b8);
+}
+
+.pack-seal {
+  background: var(--primary, #65d46e);
+  box-shadow: none;
+}
+
+.pack-glow {
+  display: none;
+}
+
+.pack-action {
+  min-height: 2.75rem;
+  border-color: var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--primary, #65d46e);
+  color: var(--primary-foreground, #102014);
+  box-shadow: none;
+}
+
+.pack-action--ghost {
+  background: transparent;
+  color: var(--foreground, #f1f5f2);
+}
+
+.pack-loading-pulse,
+.reveal-flip__back {
+  background: var(--surface-elevated, #20272d);
+}

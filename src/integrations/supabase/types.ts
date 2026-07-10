@@ -748,6 +748,57 @@ export type Database = {
           },
         ]
       }
+      operational_job_runs: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          finished_at: string | null
+          id: string
+          job_type: string
+          last_error: string | null
+          max_attempts: number
+          next_retry_at: string | null
+          result: Json | null
+          scheduled_for: string
+          started_at: string | null
+          status: string
+          target_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          job_type: string
+          last_error?: string | null
+          max_attempts?: number
+          next_retry_at?: string | null
+          result?: Json | null
+          scheduled_for: string
+          started_at?: string | null
+          status?: string
+          target_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          job_type?: string
+          last_error?: string | null
+          max_attempts?: number
+          next_retry_at?: string | null
+          result?: Json | null
+          scheduled_for?: string
+          started_at?: string | null
+          status?: string
+          target_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       players: {
         Row: {
           code: string
@@ -865,29 +916,38 @@ export type Database = {
       rounds: {
         Row: {
           ends_at: string
+          finalized_at: string | null
           id: string
           is_processed: boolean
           lineup_lock_at: string
+          lineups_locked_at: string | null
           round_number: number
           season_id: string
+          simulation_started_at: string | null
           starts_at: string
         }
         Insert: {
           ends_at: string
+          finalized_at?: string | null
           id?: string
           is_processed?: boolean
           lineup_lock_at: string
+          lineups_locked_at?: string | null
           round_number: number
           season_id: string
+          simulation_started_at?: string | null
           starts_at: string
         }
         Update: {
           ends_at?: string
+          finalized_at?: string | null
           id?: string
           is_processed?: boolean
           lineup_lock_at?: string
+          lineups_locked_at?: string | null
           round_number?: number
           season_id?: string
+          simulation_started_at?: string | null
           starts_at?: string
         }
         Relationships: [
@@ -1495,6 +1555,7 @@ export type Database = {
         }
         Returns: number
       }
+      _expire_transfer_offers: { Args: { _now?: string }; Returns: number }
       _match_clamp: {
         Args: { _max: number; _min: number; _value: number }
         Returns: number
@@ -1549,6 +1610,7 @@ export type Database = {
         Args: { _counter: number; _seed: string }
         Returns: number
       }
+      _match_simulate_internal: { Args: { _match_id: string }; Returns: Json }
       _match_strength: {
         Args: { _club_id: string; _match_id: string }
         Returns: {
@@ -1565,6 +1627,29 @@ export type Database = {
         }
         Returns: number
       }
+      _operational_process_job: {
+        Args: {
+          _job_type: string
+          _now: string
+          _scheduled_for: string
+          _target_id: string
+        }
+        Returns: Json
+      }
+      _operational_retry_delay: {
+        Args: { _attempt_count: number }
+        Returns: string
+      }
+      _operational_retry_job_run: {
+        Args: { _job_run_id: string }
+        Returns: Json
+      }
+      _release_transfer_offer_cards: {
+        Args: { _offer_id: string }
+        Returns: number
+      }
+      _round_finalize_internal: { Args: { _round_id: string }; Returns: Json }
+      _round_simulate_internal: { Args: { _round_id: string }; Returns: Json }
       _season_club_eligibility: {
         Args: { _league_id: string }
         Returns: {
@@ -1577,11 +1662,40 @@ export type Database = {
           owner_username: string
         }[]
       }
+      _season_finish_internal: { Args: { _season_id?: string }; Returns: Json }
       _validate_season_config: {
         Args: { _config_id: string }
         Returns: undefined
       }
+      accept_transfer_offer: {
+        Args: { _offer_id: string }
+        Returns: {
+          idempotent: boolean
+          offer_id: string
+          resolved_at: string
+          status: Database["public"]["Enums"]["transfer_offer_status"]
+        }[]
+      }
       admin_get_season_setup: { Args: never; Returns: Json }
+      admin_list_operational_job_runs: {
+        Args: { _limit?: number; _status?: string }
+        Returns: {
+          attempt_count: number
+          created_at: string
+          finished_at: string
+          id: string
+          job_type: string
+          last_error: string
+          max_attempts: number
+          next_retry_at: string
+          result: Json
+          scheduled_for: string
+          started_at: string
+          status: string
+          target_id: string
+          updated_at: string
+        }[]
+      }
       admin_set_season_participants: {
         Args: { _club_ids: string[]; _config_id: string }
         Returns: Json
@@ -1601,6 +1715,20 @@ export type Database = {
         }[]
       }
       admin_upsert_season_setup: { Args: { _config: Json }; Returns: Json }
+      buy_market_listing: {
+        Args: { _listing_id: string }
+        Returns: {
+          buyer_balance_cents: number
+          buyer_roster_size: number
+          club_player_id: string
+          idempotent: boolean
+          listing_id: string
+          price_cents: number
+          seller_balance_cents: number
+          seller_roster_size: number
+          status: Database["public"]["Enums"]["market_listing_status"]
+        }[]
+      }
       buy_player_from_system: {
         Args: { _club_player_id: string }
         Returns: {
@@ -1632,9 +1760,56 @@ export type Database = {
         }
         Returns: number
       }
+      cancel_market_listing: {
+        Args: { _listing_id: string }
+        Returns: {
+          club_player_id: string
+          idempotent: boolean
+          is_reserved: boolean
+          listing_id: string
+          price_cents: number
+          status: Database["public"]["Enums"]["market_listing_status"]
+        }[]
+      }
+      cancel_transfer_offer: {
+        Args: { _offer_id: string }
+        Returns: {
+          idempotent: boolean
+          offer_id: string
+          resolved_at: string
+          status: Database["public"]["Enums"]["transfer_offer_status"]
+        }[]
+      }
       create_club: {
         Args: { _abbreviation: string; _badge_code: string; _name: string }
         Returns: string
+      }
+      create_market_listing: {
+        Args: { _club_player_id: string; _price_cents: number }
+        Returns: {
+          club_player_id: string
+          idempotent: boolean
+          is_reserved: boolean
+          listing_id: string
+          price_cents: number
+          status: Database["public"]["Enums"]["market_listing_status"]
+        }[]
+      }
+      create_transfer_offer: {
+        Args: {
+          _cash_cents?: number
+          _expires_at?: string
+          _from_club_player_ids: string[]
+          _to_club_id: string
+          _to_club_player_ids: string[]
+        }
+        Returns: {
+          expires_at: string
+          idempotent: boolean
+          offer_id: string
+          reserved_count: number
+          status: Database["public"]["Enums"]["transfer_offer_status"]
+        }[]
       }
       get_current_round_state: { Args: never; Returns: Json }
       get_match_public_details: { Args: { _match_id: string }; Returns: Json }
@@ -1657,6 +1832,26 @@ export type Database = {
           wins: number
         }[]
       }
+      get_trade_target_roster: {
+        Args: { _club_id: string }
+        Returns: {
+          club_player_id: string
+          defending: number
+          dribbling: number
+          finishing: number
+          goalkeeping: number
+          overall: number
+          passing: number
+          physical: number
+          player_id: string
+          player_name: string
+          position: Database["public"]["Enums"]["player_position"]
+          rarity: Database["public"]["Enums"]["player_rarity"]
+          reference_value_cents: number
+          sector: Database["public"]["Enums"]["player_sector"]
+          velocity: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1665,6 +1860,39 @@ export type Database = {
         Returns: boolean
       }
       is_approved_user: { Args: { _user_id?: string }; Returns: boolean }
+      list_market_listings: {
+        Args: {
+          _max_overall?: number
+          _max_price_cents?: number
+          _min_overall?: number
+          _position?: Database["public"]["Enums"]["player_position"]
+          _rarity?: Database["public"]["Enums"]["player_rarity"]
+        }
+        Returns: {
+          club_player_id: string
+          created_at: string
+          defending: number
+          dribbling: number
+          finishing: number
+          goalkeeping: number
+          is_mine: boolean
+          listing_id: string
+          overall: number
+          passing: number
+          physical: number
+          player_id: string
+          player_name: string
+          position: Database["public"]["Enums"]["player_position"]
+          price_cents: number
+          rarity: Database["public"]["Enums"]["player_rarity"]
+          reference_value_cents: number
+          sector: Database["public"]["Enums"]["player_sector"]
+          seller_abbreviation: string
+          seller_club_id: string
+          seller_name: string
+          velocity: number
+        }[]
+      }
       list_match_score_summaries: {
         Args: { _match_id?: string }
         Returns: {
@@ -1686,6 +1914,25 @@ export type Database = {
           status: Database["public"]["Enums"]["match_status"]
         }[]
       }
+      list_my_transfer_offers: {
+        Args: never
+        Returns: {
+          can_accept: boolean
+          can_cancel: boolean
+          can_reject: boolean
+          cash_cents: number
+          created_at: string
+          direction: string
+          expires_at: string
+          from_cards: Json
+          from_club: Json
+          offer_id: string
+          resolved_at: string
+          status: Database["public"]["Enums"]["transfer_offer_status"]
+          to_cards: Json
+          to_club: Json
+        }[]
+      }
       list_season_club_eligibility: {
         Args: { _include_private?: boolean }
         Returns: {
@@ -1698,6 +1945,15 @@ export type Database = {
           owner_username: string
         }[]
       }
+      list_trade_targets: {
+        Args: never
+        Returns: {
+          abbreviation: string
+          club_id: string
+          name: string
+          roster_size: number
+        }[]
+      }
       normalize_club_name: { Args: { _name: string }; Returns: string }
       open_initial_pack: {
         Args: { _club_id: string }
@@ -1707,6 +1963,16 @@ export type Database = {
           pack_id: string
           player_id: string
           slot: number
+        }[]
+      }
+      process_due_rounds: { Args: { _now?: string }; Returns: Json }
+      reject_transfer_offer: {
+        Args: { _offer_id: string }
+        Returns: {
+          idempotent: boolean
+          offer_id: string
+          resolved_at: string
+          status: Database["public"]["Enums"]["transfer_offer_status"]
         }[]
       }
       save_lineup: {

@@ -271,7 +271,7 @@ Adicionar teste dedicado para:
 - soma de OVR `578` ou `579` conforme pacote;
 - associação única entre clube e template;
 - criação concorrente sem template repetido;
-- sétimo clube falha sem template livre;
+- criação falha com `starter_pack_templates_exhausted` quando não existe template livre;
 - abertura entrega códigos exatos;
 - duas chamadas retornam mesmos itens;
 - pacote não consome estoque comercial;
@@ -314,7 +314,7 @@ Atualizar:
 
 1. Seis clubes recebem seis pacotes diferentes.
 2. Cada clube abre exatamente composição definida.
-3. OVR total por pacote corresponde metadado esperado.
+3. OVR total por pacote corresponde ao metadado esperado.
 4. Nenhuma carta aparece em dois pacotes.
 5. Nenhuma carta comercial entra em pacote.
 6. Mercado mostra `0/10` antes e `10/10` após abertura.

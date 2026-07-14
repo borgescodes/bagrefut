@@ -122,9 +122,11 @@ ESLint, TypeScript, Vitest, assets/manifest PWA, assets de jogadores e build.
 
 Fotos de jogadores seguem contrato `public/players/<players.code>.webp`
 (ex.: `public/players/ATA12.webp`) - WebP 1024x1024. `players.name` é nome
-de display; `players.code` é chave técnica e nunca aparece na UI. Jogadores
-sem foto usam fallback por nome. Pipeline: `bun run assets:players`; validação:
-`bun run check:players`. Detalhes em `docs/PLAYER_CARDS.md`.
+de display; `players.code` é chave técnica e nunca aparece na UI. O catálogo
+possui 60 fotos para 60 jogadores: 12 GK, 18 DEF, 18 MID e 12 ATA. O fallback
+por nome permanece apenas como resiliência para erro de carregamento ou asset
+ausente. Pipeline: `bun run assets:players`; validação: `bun run check:players`.
+Detalhes em `docs/PLAYER_CARDS.md`.
 
 Repo usa LF como fim de linha padrão via `.gitattributes`. Arquivos `.bat`,
 `.cmd` e `.ps1` permanecem CRLF; imagens, favicon, fontes e ZIPs são binários.

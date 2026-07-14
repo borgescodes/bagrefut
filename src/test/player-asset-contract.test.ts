@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -11,12 +12,38 @@ import { describe, expect, it } from "vitest";
  */
 
 const SRC_DIR = path.join(process.cwd(), "src");
-const MIGRATION_PATH = path.join(
+const OLD_MIGRATION_PATH = path.join(
   process.cwd(),
   "supabase",
   "migrations",
   "20260713120000_player_display_names.sql",
 );
+const MID_MIGRATION_PATH = path.join(
+  process.cwd(),
+  "supabase",
+  "migrations",
+  "20260714120000_mid_player_display_names.sql",
+);
+const EXPECTED_MID_NAMES = new Map([
+  ["MID01", "Gauvao"],
+  ["MID02", "BELLIGOL"],
+  ["MID03", "BAD 2"],
+  ["MID04", "KIKO"],
+  ["MID05", "ALOKque"],
+  ["MID06", "sei la"],
+  ["MID07", "DOLI"],
+  ["MID08", "TCHOLA"],
+  ["MID09", "MANEL GOMES"],
+  ["MID10", "PAPAI KRISS"],
+  ["MID11", "BAD LINDO"],
+  ["MID12", "MIA KHALIFA"],
+  ["MID13", "GORDOMIRO"],
+  ["MID14", "AIII NOBRU"],
+  ["MID15", "RUSBÉ"],
+  ["MID16", "PESSE"],
+  ["MID17", "NEIMAR JUNIO"],
+  ["MID18", "GAYSTAVO"],
+]);
 
 function listSourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -35,11 +62,16 @@ function findMatches(pattern: RegExp): string[] {
   return sourceFiles.filter((file) => pattern.test(readFileSync(file, "utf8")));
 }
 
-describe("mapeamento de nomes (migration)", () => {
-  const sql = readFileSync(MIGRATION_PATH, "utf8");
+function migrationPairs(sql: string, positions: string): [string, string][] {
+  const pairPattern = new RegExp(`\\('((?:${positions})\\d{2})', '([^']+)'\\)`, "g");
+  return [...sql.matchAll(pairPattern)].map((match) => [match[1], match[2]]);
+}
+
+describe("migration antiga de nomes ATA/DEF/GK", () => {
+  const sql = readFileSync(OLD_MIGRATION_PATH, "utf8");
 
   it("contém exatamente 42 códigos ATA/DEF/GK", () => {
-    const codes = [...sql.matchAll(/\('((?:ATA|DEF|GK)\d{2})',/g)].map((match) => match[1]);
+    const codes = migrationPairs(sql, "ATA|DEF|GK").map(([code]) => code);
     expect(codes).toHaveLength(42);
     expect(new Set(codes).size).toBe(42);
   });
@@ -51,6 +83,65 @@ describe("mapeamento de nomes (migration)", () => {
   it("mantém o nome duplicado intencional VOZINHA em ATA11 e GK09", () => {
     expect(sql).toContain("('ATA11', 'VOZINHA')");
     expect(sql).toContain("('GK09', 'VOZINHA')");
+  });
+});
+
+describe("migration nova de nomes MID", () => {
+  it("contém exatamente os 18 códigos MID únicos e o mapeamento oficial", () => {
+    const sql = readFileSync(MID_MIGRATION_PATH, "utf8");
+    const pairs = migrationPairs(sql, "MID");
+    expect(pairs).toHaveLength(18);
+    expect(new Set(pairs.map(([code]) => code)).size).toBe(18);
+    expect(new Map(pairs)).toEqual(EXPECTED_MID_NAMES);
+  });
+
+  it("não altera ATA, DEF ou GK", () => {
+    const sql = readFileSync(MID_MIGRATION_PATH, "utf8");
+    expect(sql).not.toMatch(/\('(?:ATA|DEF|GK)\d{2}'/);
+  });
+
+  it("atualiza somente players.name", () => {
+    const sql = readFileSync(MID_MIGRATION_PATH, "utf8");
+    const updateBlock = sql.match(/UPDATE public\.players p[\s\S]*?GET DIAGNOSTICS/)?.[0];
+
+    expect(updateBlock).toBeDefined();
+    expect(updateBlock).toMatch(/SET name = btrim\(m\.display_name\)/);
+    expect(updateBlock).not.toMatch(
+      /\b(?:rarity|sector|overall|finishing|passing|dribbling|defending|velocity|physical|reference_value_cents|updated_at)\s*=/,
+    );
+  });
+});
+
+describe("contrato total de 60 assets", () => {
+  it("EXPECTED_ASSET_CODES contém os 60 códigos oficiais, incluindo MID01-MID18", async () => {
+    const moduleUrl = pathToFileURL(
+      path.join(process.cwd(), "scripts", "player-image-config.mjs"),
+    ).href;
+    const config = (await import(/* @vite-ignore */ moduleUrl)) as Record<string, unknown>;
+    const codes = config.EXPECTED_ASSET_CODES as string[];
+    const expectedMid = Array.from(
+      { length: 18 },
+      (_, index) => `MID${String(index + 1).padStart(2, "0")}`,
+    );
+
+    expect(codes).toHaveLength(60);
+    expect(new Set(codes).size).toBe(60);
+    expect(codes).toEqual(expect.arrayContaining(expectedMid));
+  });
+
+  it("public/players contém exatamente 60 WebP oficiais", async () => {
+    const moduleUrl = pathToFileURL(
+      path.join(process.cwd(), "scripts", "player-image-config.mjs"),
+    ).href;
+    const config = (await import(/* @vite-ignore */ moduleUrl)) as Record<string, unknown>;
+    const expectedFiles = (config.EXPECTED_ASSET_CODES as string[])
+      .map((code) => `${code}.webp`)
+      .sort();
+    const actualFiles = readdirSync(path.join(process.cwd(), "public", "players"))
+      .filter((file) => file.endsWith(".webp"))
+      .sort();
+
+    expect(actualFiles).toEqual(expectedFiles);
   });
 });
 

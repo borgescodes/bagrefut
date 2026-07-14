@@ -2,7 +2,7 @@
  * Valida os assets finais de jogador em public/players/.
  *
  * Garante o contrato public/players/<players.code>.webp:
- *   - exatamente os 42 assets esperados (ATA01-12, DEF01-18, GK01-12);
+ *   - exatamente os 60 assets esperados (GK01-12, DEF01-18, MID01-18, ATA01-12);
  *   - WebP real (magic bytes RIFF....WEBP), não só extensão;
  *   - dimensão 1024x1024;
  *   - nenhum JPEG/JPG/JFIF, nenhum UUID legado, nenhum arquivo inesperado.
@@ -63,12 +63,22 @@ function main() {
   if (!existsSync(PLAYERS_DIR)) fail("public/players não existe");
 
   const files = readdirSync(PLAYERS_DIR);
+  const assetFiles = files.filter((file) => !ALLOWED_EXTRA_FILES.has(file));
+
+  if (assetFiles.length !== EXPECTED_ASSET_CODES.length) {
+    fail(
+      `esperava exatamente ${EXPECTED_ASSET_CODES.length} assets, encontrou ${assetFiles.length}`,
+    );
+  }
 
   for (const file of files) {
     if (ALLOWED_EXTRA_FILES.has(file)) continue;
     if (FORBIDDEN_EXTENSIONS.test(file)) fail(`extensão proibida em public/players: ${file}`);
     if (UUID_PATTERN.test(file)) fail(`asset UUID legado em public/players: ${file}`);
     if (/\s/.test(file)) fail(`nome de asset com espaço: ${file}`);
+    if (/\.webp$/i.test(file) && path.parse(file).name !== path.parse(file).name.toUpperCase()) {
+      fail(`código de asset deve estar em uppercase: ${file}`);
+    }
     const expected = EXPECTED_ASSET_CODES.some((code) => file === `${code}.webp`);
     if (!expected) fail(`asset inesperado em public/players: ${file}`);
   }

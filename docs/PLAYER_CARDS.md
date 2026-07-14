@@ -108,13 +108,14 @@ public/players/ATA12.webp
 - `playerImagePath(code)` normaliza (trim + uppercase), aceita somente as
   faixas `GK01-GK12`, `DEF01-DEF18`, `MID01-MID18`, `ATA01-ATA12` e lança
   para UUID ou código malformado.
-- Formato final: WebP `1024x1024`, qualidade ~82.
-- Jogadores `MID` não têm foto nesta fase e usam o fallback por nome.
+- Formato final: WebP `1024x1024`, qualidade 82.
+- Cobertura total: 60 jogadores e 60 fotos (`GK` 12, `DEF` 18, `MID` 18,
+  `ATA` 12).
 
 ### Pipeline de conversão
 
-As fotos brutas (JPEG/JFIF com extensões duplicadas) ficam fora do git em
-`./player-images-raw`. O pipeline (`scripts/process-player-images.mjs`, com
+As fotos brutas (JPEG/JFIF/WebP, inclusive em subdiretórios) ficam fora do git
+em `./player-images-raw`. O pipeline (`scripts/process-player-images.mjs`, com
 `sharp`) extrai o código pelo padrão `^(GK|DEF|MID|ATA)\d{2}`, aplica
 autorrotação EXIF, converte para sRGB, remove metadados, recorta em
 `1024x1024` (crop por atenção, com overrides manuais em
@@ -122,16 +123,18 @@ autorrotação EXIF, converte para sRGB, remove metadados, recorta em
 
 ```bash
 bun run assets:players   # converte a partir de ./player-images-raw
-bun run check:players    # valida os 42 assets (nome, formato real, 1024x1024)
+bun run assets:players -- --source <dir> --position MID
+bun run check:players    # valida os 60 assets (nome, formato real, 1024x1024)
 ```
 
 `check:players` também roda dentro de `bun run check`.
 
 ### Fallback
 
-Imagem ausente ou código inválido nunca mostra ícone quebrado nem o code: a
-carta exibe silhueta + iniciais derivadas de `players.name` + posição, com
-texto acessível `Sem foto de <nome>` (`role="img"` + `aria-label`).
+Erro de carregamento, imagem ausente ou código inválido nunca mostra ícone
+quebrado nem o code: como mecanismo de resiliência, a carta exibe silhueta +
+iniciais derivadas de `players.name` + posição, com texto acessível
+`Sem foto de <nome>` (`role="img"` + `aria-label`).
 
 ## Composição dos pacotes
 

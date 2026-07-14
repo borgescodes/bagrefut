@@ -23,7 +23,9 @@ dist-ssr
 
 # Fontes brutas de assets de jogador (não versionadas; só o WebP final entra)
 player-images-raw/
+player-images-mid-raw/
 BAGREFUT IMG.zip
+img_mid_webp.zip
 players-organizado-reduzido.xlsx
 
 # Editor directories and files

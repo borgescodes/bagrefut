@@ -1,6 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import type { Database } from "@/integrations/supabase/types";
+
+vi.mock("@tanstack/react-start", () => ({
+  createServerFn: () => {
+    const chain = {
+      middleware: () => chain,
+      validator: () => chain,
+      handler: (handler: unknown) => handler,
+    };
+    return chain;
+  },
+}));
+
+vi.mock("@/integrations/supabase/auth-middleware", () => ({
+  requireSupabaseAuth: {},
+}));
+
 import { loadRoster, loadSystemMarket } from "@/lib/market.functions";
 
 type QueryResult = {
@@ -25,11 +41,11 @@ function createQueryClient(result: QueryResult = { data: [], error: null }) {
   const from = vi.fn(() => builder);
   const supabase = { from } as unknown as SupabaseClient<Database>;
 
-  return { supabase, from, select, eq, order };
+  return { supabase, from, eq, order };
 }
 
 describe("market server query scope", () => {
-  it("filters roster by the authenticated club id even when RLS can read more rows", async () => {
+  it("filters roster by authenticated club id even when RLS can read more rows", async () => {
     const query = createQueryClient();
     const clubId = "00000000-0000-0000-0000-000000000123";
 

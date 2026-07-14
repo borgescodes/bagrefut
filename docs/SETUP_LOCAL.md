@@ -2,10 +2,10 @@
 
 ## Variáveis de ambiente
 
-Este projeto usa Lovable Cloud. O arquivo `.env` fica versionado porque o
-Lovable precisa dele neste repositório. Ele deve conter apenas chaves públicas
-ou valores seguros para esse fluxo. Segredos administrativos continuam fora do
-client e não devem ser expostos em variáveis `VITE_*`.
+Este projeto usa Lovable Cloud. Arquivo `.env` fica versionado porque Lovable
+precisa dele neste repositório. Deve conter apenas chaves públicas ou valores
+seguros para esse fluxo. Segredos administrativos continuam fora do client e
+não devem ser expostos em variáveis `VITE_*`.
 
 Chaves relevantes:
 
@@ -23,10 +23,10 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Bun e o gerenciador canonico. `bun.lock` e o unico lockfile versionado; nao rode
-`npm install`, `npm ci`, `pnpm` ou `yarn`. Os scripts aceitam `npm run <script>`
-quando `node_modules` ja estiver instalado, mas npm nao e o gerenciador de
-instalacao do projeto.
+Bun é gerenciador canônico. `bun.lock` é único lockfile versionado; não rode
+`npm install`, `npm ci`, `pnpm` ou `yarn`. Scripts aceitam `npm run <script>`
+quando `node_modules` já estiver instalado, mas npm não é gerenciador de
+instalação do projeto.
 
 ## Scripts
 
@@ -45,17 +45,17 @@ bun run lint
 
 `bun run test` usa Vitest. Evite `bun test`.
 
-`bun run format` aplica Prettier. `bun run format:check` valida formatacao.
+`bun run format` aplica Prettier. `bun run format:check` valida formatação.
 
-`bun run check` executa, nesta ordem: politica de package manager, Prettier,
-ESLint, TypeScript, Vitest, validacao PWA e build.
+`bun run check` executa, nesta ordem: política de package manager, Prettier,
+ESLint, TypeScript, Vitest, validação PWA, validação de assets e build.
 
-O repo usa LF por padrao via `.gitattributes`. Windows scripts (`.bat`, `.cmd`,
-`.ps1`) permanecem CRLF; assets binarios nao sao normalizados.
+Repo usa LF por padrão via `.gitattributes`. Windows scripts (`.bat`, `.cmd`,
+`.ps1`) permanecem CRLF; assets binários não são normalizados.
 
 ## PWA local
 
-Para validar instalacao local:
+Para validar instalação local:
 
 ```bash
 bun run build
@@ -63,44 +63,62 @@ bun run preview
 ```
 
 No preview, confira `/manifest.webmanifest`, `/sw.js`, `/favicon.ico`,
-`/apple-touch-icon.png` e os icones PWA. O service worker e registrado apenas em
-producao e pode ser desativado com `?sw=off`. O cache e conservador: somente
-arquivos estaticos versionados do build, sem cache de Supabase, Auth, RPCs ou
-dados privados. Instalacao PWA real em producao exige HTTPS.
+`/apple-touch-icon.png` e ícones PWA. Service worker é registrado apenas em
+produção e pode ser desativado com `?sw=off`. Cache é conservador: somente
+arquivos estáticos versionados do build, sem cache de Supabase, Auth, RPCs ou
+dados privados. Instalação PWA real em produção exige HTTPS.
 
-Testes SQL em `supabase/tests/database/*.sql` sao manuais no SQL Editor Lovable.
-A ordem correta e aplicar a migration primeiro e executar o teste SQL depois,
-preservando transacao/rollback quando o teste ja estiver preparado assim.
+## Testes SQL
 
-Arquivos SQL existentes:
+Testes em `supabase/tests/database/*.sql` são manuais no SQL Editor Lovable.
+Aplique migration antes de executar teste correspondente. Preserve
+`BEGIN`/`ROLLBACK` quando arquivo já estiver preparado assim.
+
+Arquivos principais:
 
 - `admin_audit_and_game_rls.sql`
 - `club_identity_security.sql`
+- `closed_market_economy.sql`
+- `fair_starter_packs.sql`
 - `match_events_rls.sql`
 - `open_initial_pack_concurrency.sql`
 - `player_market_training.sql`
 - `save_lineup_security.sql`
 
-## Promover o primeiro admin (executar uma vez, via SQL)
+Pacotes balanceados:
 
-Depois que o usuário destino se cadastrar e for aprovado:
+1. aplique `supabase/migrations/20260713160000_fair_starter_packs.sql`;
+2. execute `supabase/tests/database/fair_starter_packs.sql`;
+3. confirme saída:
+
+```text
+NOTICE: fair_starter_packs contract test passed
+ROLLBACK
+```
+
+Migration possui preflight e falha se houver pacote aberto, carta já atribuída,
+mais de seis clubes, código ausente ou OVR diferente da definição aprovada.
+
+## Promover primeiro admin (executar uma vez, via SQL)
+
+Depois que usuário destino se cadastrar e for aprovado:
 
 ```sql
--- 1) Aprove o perfil (se ainda não estiver aprovado)
+-- 1) Aprove perfil, se ainda não estiver aprovado
 UPDATE public.profiles SET status = 'approved' WHERE username = 'seu_username_aqui';
 
--- 2) Insira o papel admin
+-- 2) Insira papel admin
 INSERT INTO public.user_roles (user_id, role)
 SELECT id, 'admin' FROM public.profiles WHERE username = 'seu_username_aqui'
 ON CONFLICT (user_id, role) DO NOTHING;
 ```
 
-A partir daí, o painel `/admin` fica disponível para esse usuário.
+A partir daí, painel `/admin` fica disponível para esse usuário.
 
 ## Cadastro / login
 
 - Usuários novos entram em `/cadastro`, escolhem username (3-16, letras e
-  números) e senha (mín. 8, com letra e número). O e-mail interno é derivado
-  automaticamente (`{username}@bagrefut.local`) — o usuário nunca vê e-mail.
-- Após cadastro, a conta fica `pending`. O admin aprova em `/admin`.
+  números) e senha (mín. 8, com letra e número). E-mail interno é derivado
+  automaticamente (`{username}@bagrefut.local`) - usuário nunca vê e-mail.
+- Após cadastro, conta fica `pending`. Admin aprova em `/admin`.
 - Login em `/login` com username + senha.

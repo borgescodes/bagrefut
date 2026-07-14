@@ -1843,6 +1843,7 @@ export type Database = {
           overall: number
           passing: number
           physical: number
+          player_code: string
           player_id: string
           player_name: string
           position: Database["public"]["Enums"]["player_position"]
@@ -1880,6 +1881,7 @@ export type Database = {
           overall: number
           passing: number
           physical: number
+          player_code: string
           player_id: string
           player_name: string
           position: Database["public"]["Enums"]["player_position"]

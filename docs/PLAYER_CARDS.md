@@ -20,6 +20,8 @@ Props:
 ```ts
 type PlayerCardProps = {
   player: PlayerCardData;
+  variant?: "full" | "compact"; // full: revelação/detalhe; compact: grades
+  priceLabel?: string; // rodapé opcional do compact (mercado)
   className?: string;
   priority?: boolean; // eager + fetchPriority=high para a primeira carta
   interactive?: boolean;
@@ -27,6 +29,15 @@ type PlayerCardProps = {
   disabled?: boolean;
 };
 ```
+
+### Variantes
+
+- `full` (padrão): carta completa com trilho lateral (setor/raridade) e a
+  grade de 6 atributos. Largura limitada a `min(100%, 21rem)`. Uso:
+  revelação do pacote, diálogo/detalhe, visualização ampliada.
+- `compact`: foto + nome + overall + posição + setor (e preço opcional),
+  aspecto `3/4`, pensada para grades densas (elenco, mercado, resumo do
+  pacote). Sem grade de atributos — atributos completos ficam no detalhe.
 
 ## Atributos exibidos
 
@@ -67,11 +78,14 @@ pika → ouro escuro
 
 A paleta é aplicada via `data-rarity` no elemento raiz da carta.
 
-## Nome exibido
+## Nome exibido e chave técnica
 
-O nome vem direto de `players.name`. Não existe mapa paralelo de nomes no
-frontend: qualquer troca futura de nomes no banco aparece automaticamente,
-sem alteração de código.
+- `players.name` é o nome oficial de display. Não existe mapa paralelo de
+  nomes no frontend: qualquer troca futura de nomes no banco aparece
+  automaticamente, sem alteração de código.
+- `players.code` (ex.: `ATA12`) é identificador técnico e chave do asset de
+  imagem. **O code nunca é exibido na UI** — nem em textos, labels,
+  tooltips, fallbacks ou `aria-label`.
 
 O setor é formatado somente para display (`bela_vista → BELA VISTA`); o
 valor persistido não muda.
@@ -81,21 +95,43 @@ valor persistido não muda.
 Convenção obrigatória:
 
 ```text
-/public/players/<players.id>.webp
+public/players/<players.code>.webp
 ```
 
-- A imagem usa `players.id` (UUID), **nunca** `players.code`.
-- `playerImagePath(playerId)` valida o UUID antes de montar o caminho e
-  lança para valores inválidos.
-- Tamanho recomendado: `1024x1024`, formato WebP.
-- Exemplo real (CSV de referência): jogador `GK01` →
-  `public/players/c35816ce-8471-4ec9-bce7-1eb34cd8e4d6.webp`.
+Exemplo:
+
+```text
+public/players/ATA12.webp
+```
+
+- O asset usa `players.code`, **nunca** `players.id` (UUID).
+- `playerImagePath(code)` normaliza (trim + uppercase), aceita somente as
+  faixas `GK01-GK12`, `DEF01-DEF18`, `MID01-MID18`, `ATA01-ATA12` e lança
+  para UUID ou código malformado.
+- Formato final: WebP `1024x1024`, qualidade ~82.
+- Jogadores `MID` não têm foto nesta fase e usam o fallback por nome.
+
+### Pipeline de conversão
+
+As fotos brutas (JPEG/JFIF com extensões duplicadas) ficam fora do git em
+`./player-images-raw`. O pipeline (`scripts/process-player-images.mjs`, com
+`sharp`) extrai o código pelo padrão `^(GK|DEF|MID|ATA)\d{2}`, aplica
+autorrotação EXIF, converte para sRGB, remove metadados, recorta em
+`1024x1024` (crop por atenção, com overrides manuais em
+`scripts/player-image-config.mjs`) e grava o WebP final.
+
+```bash
+bun run assets:players   # converte a partir de ./player-images-raw
+bun run check:players    # valida os 42 assets (nome, formato real, 1024x1024)
+```
+
+`check:players` também roda dentro de `bun run check`.
 
 ### Fallback
 
-Imagem ausente ou id inválido nunca mostra ícone quebrado: a carta exibe um
-fallback coerente com a raridade (silhueta em gradiente) com o `code` do
-jogador, mantendo dimensões e acessibilidade (`role="img"` + `aria-label`).
+Imagem ausente ou código inválido nunca mostra ícone quebrado nem o code: a
+carta exibe silhueta + iniciais derivadas de `players.name` + posição, com
+texto acessível `Sem foto de <nome>` (`role="img"` + `aria-label`).
 
 ## Fluxo de abertura (`/abrir-pacote`)
 

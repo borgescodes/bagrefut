@@ -6,6 +6,7 @@ import {
   type Formation,
   type PlayerAttributeKey,
   type PlayerPosition,
+  type PlayerRarity,
   type PlayStyle,
 } from "@/domain/enums";
 import type { PlayerAttributes } from "@/domain/types";
@@ -21,8 +22,12 @@ export interface FormationSlot {
 
 export interface LineupRosterPlayer {
   clubPlayerId: string;
+  /** players.code — chave técnica do asset; nunca renderizar na UI. */
+  code: string;
   name: string;
   position: PlayerPosition;
+  rarity: PlayerRarity;
+  sector: string;
   overall: number;
   attributes: PlayerAttributes;
   isReserved: boolean;

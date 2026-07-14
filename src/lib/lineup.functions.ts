@@ -178,8 +178,11 @@ export const getLineupWorkspace = createServerFn({ method: "GET" })
             id,
             is_reserved,
             players (
+              code,
               name,
               position,
+              rarity,
+              sector,
               overall,
               velocity,
               finishing,
@@ -268,8 +271,11 @@ type RosterRow = {
   id: string;
   is_reserved: boolean;
   players: {
+    code: string;
     name: string;
     position: PlayerPosition;
+    rarity: Database["public"]["Enums"]["player_rarity"];
+    sector: Database["public"]["Enums"]["player_sector"];
     overall: number;
     velocity: number;
     finishing: number;
@@ -331,8 +337,11 @@ function toRosterPlayer(row: RosterRow): LineupRosterPlayer {
   }
   const rosterPlayer: LineupRosterPlayer = {
     clubPlayerId: row.id,
+    code: player.code,
     name: player.name,
     position: player.position,
+    rarity: player.rarity,
+    sector: player.sector,
     overall: player.overall,
     attributes: {
       velocity: player.velocity,

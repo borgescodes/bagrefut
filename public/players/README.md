@@ -1,25 +1,32 @@
-# Imagens dos jogadores
+# Assets de jogadores
 
-Formato obrigatório do nome do arquivo:
+Contrato obrigatório:
 
 ```text
-<players.id>.webp
+public/players/<players.code>.webp
 ```
 
 Exemplo:
 
 ```text
-c35816ce-8471-4ec9-bce7-1eb34cd8e4d6.webp
+public/players/ATA12.webp
 ```
 
-- `players.id` é o UUID da tabela `public.players`.
-- Tamanho recomendado: 1024x1024, formato WebP.
-- Imagem ausente cai no fallback visual da carta (sem ícone quebrado).
+- A chave do asset é `players.code` (ex.: `GK01`, `DEF18`, `ATA12`) —
+  **nunca** `players.id` (UUID) e nunca nomes com espaço, extensão dupla ou
+  caixa baixa.
+- Formato: WebP real, `1024x1024`, qualidade ~82, sem metadados.
+- Cobertura atual: `ATA01-ATA12`, `DEF01-DEF18`, `GK01-GK12` (42 assets).
+  Jogadores `MID` não têm foto e usam o fallback visual por nome.
+- `players.code` é técnico e nunca aparece na UI; o display usa
+  `players.name`.
 
-Não usar:
+## Gerar e validar
 
-```text
-<players.code>.webp        (ex.: GK01.webp)
-<club_players.id>.webp
-nome do jogador.webp
+```bash
+bun run assets:players   # converte ./player-images-raw → public/players/*.webp
+bun run check:players    # valida contagem, nomes, formato real e dimensões
 ```
+
+O pipeline vive em `scripts/process-player-images.mjs`; overrides de crop
+por código ficam em `scripts/player-image-config.mjs`.

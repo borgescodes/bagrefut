@@ -21,6 +21,11 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Fontes brutas de assets de jogador (não versionadas; só o WebP final entra)
+player-images-raw/
+BAGREFUT IMG.zip
+players-organizado-reduzido.xlsx
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

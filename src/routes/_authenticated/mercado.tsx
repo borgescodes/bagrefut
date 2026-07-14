@@ -56,6 +56,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/mercado")({
@@ -314,7 +321,7 @@ function RosterTab(props: {
         {MIN_ROSTER_SIZE}.
       </div>
 
-      <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))] lg:grid-cols-[repeat(4,minmax(0,1fr))] xl:grid-cols-[repeat(5,minmax(0,1fr))]">
         {props.cards.map((card) => {
           const attribute = attributes[card.clubPlayerId] ?? firstValidAttribute(card);
           const progress =
@@ -473,7 +480,7 @@ function SystemTab(props: {
       ) : visibleCards.length === 0 ? (
         <EmptyState text="Nenhuma carta da vitrine atende aos filtros." />
       ) : (
-        <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))] lg:grid-cols-[repeat(4,minmax(0,1fr))] xl:grid-cols-[repeat(5,minmax(0,1fr))]">
           {visibleCards.map((card) => {
             const reason = !card.isAvailable
               ? "Carta indisponível"
@@ -668,7 +675,7 @@ function P2PTab(props: {
       ) : visibleListings.length === 0 ? (
         <EmptyState text="Nenhum anúncio atende aos filtros." />
       ) : (
-        <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))] lg:grid-cols-[repeat(4,minmax(0,1fr))] xl:grid-cols-[repeat(5,minmax(0,1fr))]">
           {visibleListings.map((listing) => {
             const buyReason = listing.isMine
               ? null
@@ -1226,97 +1233,110 @@ function MarketFilterPanel(props: {
   filters: MarketFilters;
   setFilters: (filters: MarketFilters) => void;
 }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
   const update = <Key extends keyof MarketFilters>(key: Key, value: MarketFilters[Key]) =>
     props.setFilters({ ...props.filters, [key]: value });
 
   return (
-    <div className="mt-4 grid gap-3 rounded-md border border-slate-800 p-4 sm:grid-cols-2 lg:grid-cols-4">
-      <label className="text-sm sm:col-span-2">
-        <span className="text-slate-300">Buscar por nome</span>
-        <input
-          type="search"
-          value={props.filters.search}
-          onChange={(event) => update("search", event.target.value)}
-          className={inputClass}
+    <div className="mt-4">
+      <button
+        type="button"
+        aria-expanded={mobileOpen}
+        onClick={() => setMobileOpen((value) => !value)}
+        className={`${secondaryButtonClass} w-full sm:hidden`}
+      >
+        {mobileOpen ? "Ocultar filtros" : "Filtros"}
+      </button>
+      <div
+        className={`${mobileOpen ? "mt-3 grid" : "hidden"} gap-3 rounded-md border border-slate-800 p-4 sm:mt-0 sm:grid sm:grid-cols-2 lg:grid-cols-4`}
+      >
+        <label className="text-sm sm:col-span-2">
+          <span className="text-slate-300">Buscar por nome</span>
+          <input
+            type="search"
+            value={props.filters.search}
+            onChange={(event) => update("search", event.target.value)}
+            className={inputClass}
+          />
+        </label>
+
+        <FilterSelect
+          label="Posição"
+          value={props.filters.position ?? ""}
+          onChange={(value) =>
+            update("position", value ? (value as MarketFilters["position"]) : null)
+          }
+          options={[
+            ["GK", "Goleiro"],
+            ["DEF", "Defensor"],
+            ["MID", "Meio-campo"],
+            ["ATA", "Atacante"],
+          ]}
         />
-      </label>
 
-      <FilterSelect
-        label="Posição"
-        value={props.filters.position ?? ""}
-        onChange={(value) =>
-          update("position", value ? (value as MarketFilters["position"]) : null)
-        }
-        options={[
-          ["GK", "Goleiro"],
-          ["DEF", "Defensor"],
-          ["MID", "Meio-campo"],
-          ["ATA", "Atacante"],
-        ]}
-      />
-
-      <FilterSelect
-        label="Raridade"
-        value={props.filters.rarity ?? ""}
-        onChange={(value) => update("rarity", value ? (value as MarketFilters["rarity"]) : null)}
-        options={[
-          ["peba", "Peba"],
-          ["paia", "Paia"],
-          ["pika", "Pika"],
-        ]}
-      />
-
-      <FilterSelect
-        label="Setor"
-        value={props.filters.sector ?? ""}
-        onChange={(value) => update("sector", value ? (value as MarketFilters["sector"]) : null)}
-        options={PLAYER_SECTORS.map((sector) => [sector, sectorLabel(sector)])}
-      />
-
-      <label className="text-sm">
-        <span className="text-slate-300">OVR mínimo</span>
-        <input
-          type="number"
-          min={1}
-          max={99}
-          value={props.filters.minOverall ?? ""}
-          onChange={(event) => update("minOverall", nullableNumber(event.target.value))}
-          className={inputClass}
+        <FilterSelect
+          label="Raridade"
+          value={props.filters.rarity ?? ""}
+          onChange={(value) => update("rarity", value ? (value as MarketFilters["rarity"]) : null)}
+          options={[
+            ["peba", "Peba"],
+            ["paia", "Paia"],
+            ["pika", "Pika"],
+          ]}
         />
-      </label>
 
-      <label className="text-sm">
-        <span className="text-slate-300">OVR máximo</span>
-        <input
-          type="number"
-          min={1}
-          max={99}
-          value={props.filters.maxOverall ?? ""}
-          onChange={(event) => update("maxOverall", nullableNumber(event.target.value))}
-          className={inputClass}
+        <FilterSelect
+          label="Setor"
+          value={props.filters.sector ?? ""}
+          onChange={(value) => update("sector", value ? (value as MarketFilters["sector"]) : null)}
+          options={PLAYER_SECTORS.map((sector) => [sector, sectorLabel(sector)])}
         />
-      </label>
 
-      <FilterSelect
-        label="Ordenar por"
-        value={props.filters.sortBy}
-        onChange={(value) => update("sortBy", value as MarketFilters["sortBy"])}
-        options={[
-          ["name", "Nome"],
-          ["overall", "Overall"],
-          ["price", "Preço"],
-        ]}
-      />
+        <label className="text-sm">
+          <span className="text-slate-300">OVR mínimo</span>
+          <input
+            type="number"
+            min={1}
+            max={99}
+            value={props.filters.minOverall ?? ""}
+            onChange={(event) => update("minOverall", nullableNumber(event.target.value))}
+            className={inputClass}
+          />
+        </label>
 
-      <FilterSelect
-        label="Direção"
-        value={props.filters.sortDirection}
-        onChange={(value) => update("sortDirection", value as MarketFilters["sortDirection"])}
-        options={[
-          ["asc", "Crescente"],
-          ["desc", "Decrescente"],
-        ]}
-      />
+        <label className="text-sm">
+          <span className="text-slate-300">OVR máximo</span>
+          <input
+            type="number"
+            min={1}
+            max={99}
+            value={props.filters.maxOverall ?? ""}
+            onChange={(event) => update("maxOverall", nullableNumber(event.target.value))}
+            className={inputClass}
+          />
+        </label>
+
+        <FilterSelect
+          label="Ordenar por"
+          value={props.filters.sortBy}
+          onChange={(value) => update("sortBy", value as MarketFilters["sortBy"])}
+          options={[
+            ["name", "Nome"],
+            ["overall", "Overall"],
+            ["price", "Preço"],
+          ]}
+        />
+
+        <FilterSelect
+          label="Direção"
+          value={props.filters.sortDirection}
+          onChange={(value) => update("sortDirection", value as MarketFilters["sortDirection"])}
+          options={[
+            ["asc", "Crescente"],
+            ["desc", "Decrescente"],
+          ]}
+        />
+      </div>
     </div>
   );
 }
@@ -1346,6 +1366,11 @@ function FilterSelect(props: {
   );
 }
 
+/**
+ * Item da grade do mercado: card compacto clicável que abre o detalhe em
+ * Dialog. Atributos completos, preços, treino e ações moram no detalhe;
+ * a grade fica só com foto, nome, OVR, posição e preço.
+ */
 function MarketCardFrame(props: {
   card: MarketCardSummary;
   priceLabel: string;
@@ -1353,36 +1378,63 @@ function MarketCardFrame(props: {
   badge?: string;
   children: ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <article className="flex flex-col rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-      <div className="mx-auto w-full max-w-[19rem]">
-        <PlayerCard player={toPlayerCardData(props.card)} />
-      </div>
+    <>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => setOpen(true)}
+        className="block w-full rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-100"
+      >
+        <PlayerCard
+          player={toPlayerCardData(props.card)}
+          variant="compact"
+          interactive
+          priceLabel={formatMarketPrice(props.priceCents)}
+        />
+      </button>
 
-      {props.badge && (
-        <p className="mt-4 text-center text-xs font-medium text-amber-300">{props.badge}</p>
-      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto border-slate-800 bg-[#0b0f14] text-slate-100 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{props.card.name}</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {props.card.position} · OVR {props.card.overall} · {rarityLabel(props.card.rarity)}
+            </DialogDescription>
+          </DialogHeader>
 
-      <dl className="mt-4 space-y-1 border-t border-slate-800 pt-3 text-sm">
-        <div className="flex justify-between gap-3 text-slate-400">
-          <dt>Valor de referência</dt>
-          <dd className="tabular-nums">{formatMarketPrice(props.card.referenceValueCents)}</dd>
-        </div>
-        <div className="flex justify-between gap-3 font-medium">
-          <dt>{props.priceLabel}</dt>
-          <dd className="tabular-nums">{formatMarketPrice(props.priceCents)}</dd>
-        </div>
-      </dl>
+          <div className="mx-auto w-full max-w-[19rem]">
+            <PlayerCard player={toPlayerCardData(props.card)} />
+          </div>
 
-      <div className="mt-4 flex flex-1 flex-col justify-end gap-3">{props.children}</div>
-    </article>
+          {props.badge && (
+            <p className="text-center text-xs font-medium text-amber-300">{props.badge}</p>
+          )}
+
+          <dl className="space-y-1 border-t border-slate-800 pt-3 text-sm">
+            <div className="flex justify-between gap-3 text-slate-400">
+              <dt>Valor de referência</dt>
+              <dd className="tabular-nums">{formatMarketPrice(props.card.referenceValueCents)}</dd>
+            </div>
+            <div className="flex justify-between gap-3 font-medium">
+              <dt>{props.priceLabel}</dt>
+              <dd className="tabular-nums">{formatMarketPrice(props.priceCents)}</dd>
+            </div>
+          </dl>
+
+          <div className="flex flex-col gap-3">{props.children}</div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
 function toPlayerCardData(card: MarketCardSummary): PlayerCardData {
   return {
     id: card.playerId,
-    code: `${card.position}-${card.playerId.slice(0, 8)}`.toUpperCase(),
+    code: card.code,
     name: card.name,
     position: card.position,
     rarity: card.rarity,

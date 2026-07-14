@@ -44,8 +44,14 @@ export type DatabasePlayerRecord = {
   goalkeeping: number;
 };
 
+export type PlayerCardVariant = "full" | "compact";
+
 export type PlayerCardProps = {
   player: PlayerCardData;
+  /** "full" para revelação/detalhe; "compact" para grades (elenco, mercado). */
+  variant?: PlayerCardVariant;
+  /** Preço opcional exibido no rodapé do card compacto (contexto de mercado). */
+  priceLabel?: string;
   className?: string;
   priority?: boolean;
   interactive?: boolean;

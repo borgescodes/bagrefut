@@ -1,10 +1,18 @@
 export { PlayerCard } from "./PlayerCard";
-export { displaySector, playerCardFromDatabase, playerCardStats, playerImagePath } from "./adapter";
+export {
+  displaySector,
+  normalizePlayerCode,
+  playerCardFromDatabase,
+  playerCardStats,
+  playerImagePath,
+  playerInitials,
+} from "./adapter";
 export type {
   DatabasePlayerRecord,
   PlayerCardData,
   PlayerCardProps,
   PlayerCardStat,
+  PlayerCardVariant,
   PlayerPosition,
   PlayerRarity,
 } from "./types";

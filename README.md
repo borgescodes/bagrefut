@@ -97,6 +97,8 @@ bun run format
 bun run format:check
 bun run check
 bun run check:pwa
+bun run assets:players
+bun run check:players
 bun run build
 bun run lint
 ```
@@ -108,7 +110,14 @@ runner nativo do Bun para a suite TS.
 alterar arquivos.
 
 `bun run check` valida, nesta ordem: politica de package manager, Prettier,
-ESLint, TypeScript, Vitest, assets/manifest PWA e build.
+ESLint, TypeScript, Vitest, assets/manifest PWA, assets de jogadores e build.
+
+Fotos de jogadores seguem o contrato `public/players/<players.code>.webp`
+(ex.: `public/players/ATA12.webp`) — WebP 1024x1024. `players.name` é o nome
+de display; `players.code` é chave técnica e nunca aparece na UI. Jogadores
+sem foto (MID) usam fallback por nome. Pipeline: `bun run assets:players`
+(fotos brutas em `./player-images-raw`, fora do git); validação:
+`bun run check:players`. Detalhes em `docs/PLAYER_CARDS.md`.
 
 O repo usa LF como fim de linha padrao via `.gitattributes`. Arquivos `.bat`,
 `.cmd` e `.ps1` permanecem CRLF; imagens, favicon, fontes e ZIPs sao binarios.

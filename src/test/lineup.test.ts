@@ -35,8 +35,11 @@ function player(id: string, position: LineupRosterPlayer["position"], overall: n
   };
   return {
     clubPlayerId: id,
+    code: `${position}01`,
     name: id,
     position,
+    rarity: "peba",
+    sector: "bela_vista",
     overall,
     attributes,
     isReserved: false,

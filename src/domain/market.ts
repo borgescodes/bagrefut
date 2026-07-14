@@ -109,6 +109,8 @@ export interface AttributeProgress {
 export interface MarketCardSummary {
   clubPlayerId: string;
   playerId: string;
+  /** players.code — chave técnica do asset; nunca renderizar na UI. */
+  code: string;
   name: string;
   position: PlayerPosition;
   rarity: PlayerRarity;

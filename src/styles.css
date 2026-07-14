@@ -1463,3 +1463,143 @@ table,
 #lovable-badge {
   display: none !important;
 }
+
+/* ------------------------------------------------------------------ */
+/* Elenco e escalação: campo, slots, HUD e tiles do elenco.            */
+/* ------------------------------------------------------------------ */
+
+.pitch-panel {
+  position: relative;
+  overflow: hidden;
+  padding: 0.9rem;
+  border: 1px solid rgba(52, 211, 153, 0.16);
+  border-radius: 0.6rem;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(16, 62, 41, 0.4) 0 3.25rem,
+      rgba(11, 46, 30, 0.4) 3.25rem 6.5rem
+    ),
+    linear-gradient(180deg, #0c1f16, #0a1811);
+}
+
+.pitch-panel::before {
+  position: absolute;
+  inset: 0.55rem;
+  content: "";
+  pointer-events: none;
+  border: 1px solid rgba(226, 232, 240, 0.09);
+  border-radius: 0.4rem;
+}
+
+.pitch-panel::after {
+  position: absolute;
+  top: 50%;
+  right: 0.55rem;
+  left: 0.55rem;
+  content: "";
+  pointer-events: none;
+  border-top: 1px solid rgba(226, 232, 240, 0.09);
+}
+
+.pitch-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.pitch-slot {
+  padding: 0.7rem 0.75rem;
+  border: 1px solid rgba(226, 232, 240, 0.1);
+  border-left: 3px solid rgba(148, 163, 184, 0.35);
+  border-radius: 0.45rem;
+  background: rgba(4, 12, 8, 0.55);
+}
+
+.pitch-slot[data-filled] {
+  border-left-color: rgba(52, 211, 153, 0.7);
+}
+
+.bench-slot {
+  padding: 0.7rem 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-left: 3px solid rgba(148, 163, 184, 0.4);
+  border-radius: 0.45rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.lineup-hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 1rem;
+  margin-top: 1rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 0.5rem;
+  background: rgba(9, 17, 26, 0.85);
+  font-size: 0.8rem;
+}
+
+.lineup-hud__round {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lineup-hud__item {
+  color: rgb(148, 163, 184);
+}
+
+.lineup-hud__state {
+  margin-left: auto;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.16);
+  color: rgb(110, 231, 183);
+  font-weight: 600;
+}
+
+.lineup-hud__state[data-blocked] {
+  background: rgba(248, 113, 113, 0.14);
+  color: rgb(252, 165, 165);
+}
+
+.roster-tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  border-radius: 0.6rem;
+  text-align: left;
+}
+
+.roster-tile__badges {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 2;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.roster-tile__badges span {
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.3rem;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.roster-tile__badges span[data-kind="starter"] {
+  background: rgba(16, 185, 129, 0.85);
+  color: #04160e;
+}
+
+.roster-tile__badges span[data-kind="reserve"] {
+  background: rgba(148, 163, 184, 0.85);
+  color: #0b1220;
+}
+
+.roster-tile__badges span[data-kind="improvised"] {
+  background: rgba(245, 158, 11, 0.9);
+  color: #1c1203;
+}

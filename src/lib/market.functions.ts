@@ -32,6 +32,7 @@ import { mapMarketErrorMessage } from "@/lib/market-errors";
 
 const playerSchema = z.object({
   id: z.string().uuid(),
+  code: z.string().min(1),
   name: z.string(),
   position: z.enum(["GK", "DEF", "MID", "ATA"]),
   rarity: z.enum(["peba", "paia", "pika"]),
@@ -109,6 +110,7 @@ const listingRowSchema = z.object({
   seller_abbreviation: z.string(),
   club_player_id: z.string().uuid(),
   player_id: z.string().uuid(),
+  player_code: z.string().min(1),
   player_name: z.string(),
   position: z.enum(["GK", "DEF", "MID", "ATA"]),
   rarity: z.enum(["peba", "paia", "pika"]),
@@ -130,6 +132,7 @@ const listingRowSchema = z.object({
 const offerCardSchema = listingRowSchema.pick({
   club_player_id: true,
   player_id: true,
+  player_code: true,
   player_name: true,
   position: true,
   rarity: true,
@@ -441,7 +444,7 @@ async function loadRoster(supabase: SupabaseClient<Database>): Promise<RosterMar
         acquired_at,
         is_reserved,
         players (
-          id, name, position, rarity, sector, overall,
+          id, code, name, position, rarity, sector, overall,
           velocity, finishing, passing, dribbling, defending, physical, goalkeeping,
           reference_value_cents
         ),
@@ -521,6 +524,7 @@ function mapPlayer(
   return {
     clubPlayerId,
     playerId: player.id,
+    code: player.code,
     name: player.name,
     position: player.position,
     rarity: player.rarity,
@@ -549,6 +553,7 @@ function mapOfferCard(row: z.infer<typeof offerCardSchema>): TransferOfferCard {
   return {
     clubPlayerId: row.club_player_id,
     playerId: row.player_id,
+    code: row.player_code,
     name: row.player_name,
     position: row.position,
     rarity: row.rarity,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { displaySector, playerCardStats, playerImagePath } from "./adapter";
+import { displaySector, playerCardStats, playerImagePath, playerInitials } from "./adapter";
 import type { PlayerCardProps } from "./types";
 import "./player-card.css";
 
@@ -15,8 +15,28 @@ function verticalCharacters(value: string) {
   );
 }
 
+/**
+ * Fallback sem foto: silhueta + iniciais derivadas de players.name.
+ * players.code nunca é renderizado nem exposto em aria-label.
+ */
+function ImageFallback({ name, position }: { name: string; position: string }) {
+  return (
+    <div className="bgr-card__image-fallback" role="img" aria-label={`Sem foto de ${name}`}>
+      <span className="bgr-card__fallback-silhouette" aria-hidden="true" />
+      <span className="bgr-card__fallback-initials" aria-hidden="true">
+        {playerInitials(name)}
+      </span>
+      <span className="bgr-card__fallback-position" aria-hidden="true">
+        {position}
+      </span>
+    </div>
+  );
+}
+
 export function PlayerCard({
   player,
+  variant = "full",
+  priceLabel,
   className = "",
   priority = false,
   interactive = false,
@@ -25,11 +45,11 @@ export function PlayerCard({
 }: PlayerCardProps) {
   const imageSrc = useMemo(() => {
     try {
-      return playerImagePath(player.id);
+      return playerImagePath(player.code);
     } catch {
       return null;
     }
-  }, [player.id]);
+  }, [player.code]);
   const [imageFailed, setImageFailed] = useState(false);
   const stats = useMemo(() => playerCardStats(player), [player]);
   const sector = displaySector(player.sector);
@@ -38,6 +58,51 @@ export function PlayerCard({
   useEffect(() => setImageFailed(false), [imageSrc]);
 
   const showImage = imageSrc !== null && !imageFailed;
+
+  const image = showImage ? (
+    <img
+      className="bgr-card__image"
+      src={imageSrc}
+      alt={player.name}
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : "auto"}
+      decoding="async"
+      onError={() => setImageFailed(true)}
+    />
+  ) : (
+    <ImageFallback name={player.name} position={player.position} />
+  );
+
+  if (variant === "compact") {
+    return (
+      <article
+        className={`bgr-card-compact ${className}`.trim()}
+        data-rarity={player.rarity}
+        data-interactive={interactive || undefined}
+        data-selected={selected || undefined}
+        data-disabled={disabled || undefined}
+        aria-disabled={disabled || undefined}
+        aria-label={`Carta de ${player.name}, ${player.position}, overall ${player.overall}, raridade ${rarity}`}
+      >
+        <div className="bgr-card-compact__artwork">
+          {image}
+          <span className="bgr-card-compact__chip">
+            <strong className="bgr-card-compact__overall">{player.overall}</strong>
+            <span className="bgr-card-compact__position">{player.position}</span>
+          </span>
+        </div>
+        <div className="bgr-card-compact__body">
+          <h3 className="bgr-card-compact__name" title={player.name}>
+            {player.name}
+          </h3>
+          <p className="bgr-card-compact__meta">
+            <span className="bgr-card-compact__sector">{sector}</span>
+          </p>
+          {priceLabel && <p className="bgr-card-compact__price">{priceLabel}</p>}
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
@@ -70,25 +135,7 @@ export function PlayerCard({
       <div className="bgr-card__main">
         <div className="bgr-card__artwork">
           <div className="bgr-card__pattern" aria-hidden="true" />
-          {showImage ? (
-            <img
-              className="bgr-card__image"
-              src={imageSrc}
-              alt={player.name}
-              loading={priority ? "eager" : "lazy"}
-              fetchPriority={priority ? "high" : "auto"}
-              decoding="async"
-              onError={() => setImageFailed(true)}
-            />
-          ) : (
-            <div
-              className="bgr-card__image-fallback"
-              role="img"
-              aria-label={`Imagem ${player.code}`}
-            >
-              <span>{player.code}</span>
-            </div>
-          )}
+          {image}
         </div>
 
         <h2 className="bgr-card__name" title={player.name}>

@@ -64,7 +64,7 @@ function preloadCardImages(cards: PackCard[]) {
       const image = new Image();
       if (index === 0) image.fetchPriority = "high";
       image.decoding = "async";
-      image.src = playerImagePath(card.player.id);
+      image.src = playerImagePath(card.player.code);
     } catch {
       // Sem asset para esta carta; o fallback visual cobre.
     }
@@ -355,7 +355,7 @@ export function PackOpeningExperience() {
           <ul className="summary-grid">
             {sortedCards.map((card) => (
               <li key={card.slot} className="summary-grid__item">
-                <PlayerCard player={card.player} />
+                <PlayerCard player={card.player} variant="compact" />
               </li>
             ))}
           </ul>

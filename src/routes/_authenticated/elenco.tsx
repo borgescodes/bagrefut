@@ -1,4 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { PlayerCard, type PlayerCardData } from "@/components/player-card";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -173,12 +174,12 @@ function RosterLineupPage() {
       <RoundStatus round={workspace.data.round} />
 
       {!workspace.data.round && (
-        <p className="mt-4 rounded-md border border-slate-800 p-3 text-sm text-slate-300">
+        <p className="mt-4 text-sm text-slate-400">
           Não há rodada ativa disponível para salvar escalação agora.
         </p>
       )}
 
-      <p className="mt-4 rounded-md border border-slate-800 p-3 text-sm text-slate-300">
+      <p className="mt-2 text-sm text-slate-500">
         {getLineupSourceNotice(workspace.data.savedLineup)}
       </p>
 
@@ -211,9 +212,9 @@ function RosterLineupPage() {
             }
           >
             <h2 className="text-lg font-semibold">Elenco</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))] xl:grid-cols-[repeat(4,minmax(0,1fr))]">
               {roster.map((player) => (
-                <PlayerCard
+                <RosterPlayerTile
                   key={player.clubPlayerId}
                   player={player}
                   draft={draft}
@@ -353,17 +354,19 @@ function LineupEditor({
         </label>
       </div>
 
-      <div className="mt-5 space-y-3">
+      <div className="mt-5">
         <h3 className="text-sm font-medium text-slate-300">Titulares</h3>
-        {slots.map((slot) => (
-          <StarterSlot
-            key={slot.key}
-            slot={slot}
-            draft={draft}
-            roster={roster}
-            setDraft={setDraft}
-          />
-        ))}
+        <div className="pitch-panel mt-2 space-y-3">
+          {slots.map((slot) => (
+            <StarterSlot
+              key={slot.key}
+              slot={slot}
+              draft={draft}
+              roster={roster}
+              setDraft={setDraft}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="mt-5 space-y-3">
@@ -421,7 +424,7 @@ function StarterSlot({
   const player = roster.find((item) => item.clubPlayerId === clubPlayerId) ?? null;
 
   return (
-    <div className="rounded-md border border-slate-900 p-3">
+    <div className="pitch-slot" data-filled={Boolean(player) || undefined}>
       <label className="text-sm">
         <span className="block text-slate-300">{slot.label}</span>
         <select
@@ -482,7 +485,7 @@ function ReserveSlot({
 }) {
   const player = roster.find((item) => item.clubPlayerId === clubPlayerId) ?? null;
   return (
-    <div className="rounded-md border border-slate-900 p-3">
+    <div className="bench-slot">
       <label className="text-sm">
         <span className="block text-slate-300">Reserva {index + 1}</span>
         <select
@@ -513,7 +516,27 @@ function ReserveSlot({
   );
 }
 
-function PlayerCard({
+/** Modelo visual para o card compartilhado; o id interno usa o clubPlayerId. */
+function toCardData(player: LineupRosterPlayer): PlayerCardData {
+  return {
+    id: player.clubPlayerId,
+    code: player.code,
+    name: player.name,
+    position: player.position,
+    rarity: player.rarity,
+    sector: player.sector,
+    overall: player.overall,
+    velocity: player.attributes.velocity,
+    finishing: player.attributes.finishing,
+    passing: player.attributes.passing,
+    dribbling: player.attributes.dribbling,
+    defending: player.attributes.defending,
+    physical: player.attributes.physical,
+    goalkeeping: player.attributes.goalkeeping,
+  };
+}
+
+function RosterPlayerTile({
   player,
   draft,
   selected,
@@ -526,40 +549,32 @@ function PlayerCard({
 }) {
   const slot = findStarterSlot(draft, player.clubPlayerId);
   const isReserve = draft.reserves.includes(player.clubPlayerId);
-  const state = slot ? "titular" : isReserve ? "reserva" : "fora da escalação";
   const improvised = slot ? isImprovised(player, slot.position) : false;
 
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`rounded-md border p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-100 ${
-        selected ? "border-slate-100" : "border-slate-800"
-      }`}
+      className="roster-tile focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-100"
+      aria-pressed={selected}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-medium">{player.name}</h3>
-          <p className="text-xs text-slate-400">
-            {player.position} - OVR {player.overall}
-          </p>
-        </div>
-        <span className="rounded-sm border border-slate-700 px-2 py-1 text-xs">{state}</span>
-      </div>
-      {slot && (
-        <p className="mt-2 text-xs text-slate-400">
-          Posicao escolhida: {slot.label}. OVR efetivo: {getEffectiveOverall(player, slot.position)}
-        </p>
+      <PlayerCard player={toCardData(player)} variant="compact" interactive selected={selected} />
+      {(slot || isReserve || improvised) && (
+        <span className="roster-tile__badges" aria-hidden="true">
+          {slot && <span data-kind={improvised ? "improvised" : "starter"}>T</span>}
+          {isReserve && <span data-kind="reserve">R</span>}
+          {improvised && <span data-kind="improvised">IMP</span>}
+        </span>
       )}
-      {improvised && <p className="mt-1 text-xs text-amber-300">Improvisado</p>}
-      <dl className="mt-3 grid grid-cols-2 gap-1 text-xs text-slate-400">
-        {getAttributeEntries(player).map((attribute) => (
-          <div key={attribute.key} className="flex justify-between gap-2">
-            <dt>{formatPlayerAttributeName(attribute.key)}</dt>
-            <dd>{attribute.value}</dd>
-          </div>
-        ))}
-      </dl>
+      <span className="sr-only">
+        {slot
+          ? improvised
+            ? `Titular improvisado em ${slot.label}`
+            : `Titular em ${slot.label}`
+          : isReserve
+            ? "Reserva"
+            : "Fora da escalação"}
+      </span>
     </button>
   );
 }
@@ -651,15 +666,13 @@ function RoundStatus({
 }) {
   if (!round) return null;
   return (
-    <section className="rounded-md border border-slate-800 p-4 text-sm">
-      <h2 className="font-semibold">Rodada {round.roundNumber}</h2>
-      <p className="mt-1 text-slate-400">Início: {formatDateTime(round.startsAt)}</p>
-      <p className="text-slate-400">Limite de escalação: {formatDateTime(round.lineupLockAt)}</p>
-      <p className={round.isBlocked ? "mt-2 text-red-300" : "mt-2 text-emerald-300"}>
-        {round.isBlocked
-          ? "Escalação bloqueada pelo horário limite."
-          : "Escalação aberta para edição."}
-      </p>
+    <section className="lineup-hud" aria-label={`Rodada ${round.roundNumber}`}>
+      <span className="lineup-hud__round">Rodada {round.roundNumber}</span>
+      <span className="lineup-hud__item">Início {formatDateTime(round.startsAt)}</span>
+      <span className="lineup-hud__item">Limite {formatDateTime(round.lineupLockAt)}</span>
+      <span className="lineup-hud__state" data-blocked={round.isBlocked || undefined}>
+        {round.isBlocked ? "Bloqueada" : "Aberta"}
+      </span>
     </section>
   );
 }

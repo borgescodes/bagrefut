@@ -1,4 +1,5 @@
-.bgr-card {
+.bgr-card,
+.bgr-card-compact {
   --rail: #263341;
   --surface: #111923;
   --surface-deep: #09111a;
@@ -8,19 +9,6 @@
   --pattern: rgba(174, 185, 198, 0.3);
   --glow: rgba(174, 185, 198, 0.22);
 
-  container-type: inline-size;
-  display: grid;
-  grid-template-columns: 16% 84%;
-  width: min(100%, 35.75rem);
-  aspect-ratio: 572 / 755;
-  overflow: hidden;
-  background: var(--surface-deep);
-  color: var(--muted);
-  border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
-  border-radius: 0.7rem;
-  box-shadow:
-    0 1.2rem 3rem rgba(0, 0, 0, 0.36),
-    0 0 2.2rem var(--glow);
   font-family:
     Inter,
     ui-sans-serif,
@@ -29,10 +17,10 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  isolation: isolate;
 }
 
-.bgr-card[data-rarity="peba"] {
+.bgr-card[data-rarity="peba"],
+.bgr-card-compact[data-rarity="peba"] {
   --rail: #263341;
   --surface: #111923;
   --surface-deep: #09111a;
@@ -43,7 +31,8 @@
   --glow: rgba(148, 163, 184, 0.2);
 }
 
-.bgr-card[data-rarity="paia"] {
+.bgr-card[data-rarity="paia"],
+.bgr-card-compact[data-rarity="paia"] {
   --rail: #3c1762;
   --surface: #24103c;
   --surface-deep: #12071f;
@@ -54,7 +43,8 @@
   --glow: rgba(168, 85, 247, 0.32);
 }
 
-.bgr-card[data-rarity="pika"] {
+.bgr-card[data-rarity="pika"],
+.bgr-card-compact[data-rarity="pika"] {
   --rail: #5b3a08;
   --surface: #2a1d07;
   --surface-deep: #120d03;
@@ -65,17 +55,41 @@
   --glow: rgba(245, 158, 11, 0.34);
 }
 
-.bgr-card[data-selected] {
+/* ---------------------------------------------------------------- */
+/* Variante full: revelação de pacote, modal de detalhes.            */
+/* ---------------------------------------------------------------- */
+
+.bgr-card {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: 16% 84%;
+  width: min(100%, 21rem);
+  aspect-ratio: 572 / 755;
+  overflow: hidden;
+  background: var(--surface-deep);
+  color: var(--muted);
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  border-radius: 0.7rem;
+  box-shadow:
+    0 1.2rem 3rem rgba(0, 0, 0, 0.36),
+    0 0 2.2rem var(--glow);
+  isolation: isolate;
+}
+
+.bgr-card[data-selected],
+.bgr-card-compact[data-selected] {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.bgr-card[data-disabled] {
+.bgr-card[data-disabled],
+.bgr-card-compact[data-disabled] {
   opacity: 0.55;
   filter: saturate(0.6);
 }
 
-.bgr-card[data-interactive]:not([data-disabled]) {
+.bgr-card[data-interactive]:not([data-disabled]),
+.bgr-card-compact[data-interactive]:not([data-disabled]) {
   cursor: pointer;
 }
 
@@ -211,46 +225,64 @@
   filter: saturate(0.98) contrast(1.03);
 }
 
+/* Fallback sem foto: silhueta + iniciais do nome (nunca o code). */
 .bgr-card__image-fallback {
   display: grid;
   place-items: center;
+}
+
+.bgr-card__fallback-silhouette {
+  position: absolute;
+  inset: 0;
   background:
     radial-gradient(
-      circle at 50% 42%,
-      color-mix(in srgb, var(--accent) 24%, transparent) 0 15%,
-      transparent 15.6%
+      circle at 50% 38%,
+      color-mix(in srgb, var(--accent) 22%, transparent) 0 16%,
+      transparent 16.6%
     ),
     radial-gradient(
-      ellipse at 50% 84%,
-      color-mix(in srgb, var(--accent) 21%, transparent) 0 28%,
-      transparent 28.6%
+      ellipse at 50% 88%,
+      color-mix(in srgb, var(--accent) 19%, transparent) 0 30%,
+      transparent 30.6%
     );
 }
 
-.bgr-card__image-fallback span {
-  position: absolute;
-  bottom: 5.5cqw;
-  color: color-mix(in srgb, var(--accent-strong) 78%, transparent);
-  font-size: clamp(0.9rem, 4.8cqw, 2rem);
+.bgr-card__fallback-initials {
+  z-index: 1;
+  color: color-mix(in srgb, var(--accent-strong) 85%, transparent);
+  font-size: clamp(1.6rem, 18cqw, 4.5rem);
   font-weight: 900;
-  letter-spacing: 0.17em;
+  letter-spacing: 0.06em;
+}
+
+.bgr-card__fallback-position {
+  position: absolute;
+  bottom: 6%;
+  z-index: 1;
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+  font-size: clamp(0.6rem, 4cqw, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.2em;
 }
 
 .bgr-card__name {
+  display: -webkit-box;
   overflow: hidden;
   margin: 0;
   padding: 1.4cqw 3cqw 1.6cqw;
   border-block: 1px solid var(--accent);
   background: color-mix(in srgb, var(--surface) 92%, black);
   color: var(--accent);
-  font-size: clamp(1rem, 5.5cqw, 2.45rem);
+  font-size: clamp(0.85rem, 5cqw, 2.1rem);
   font-weight: 900;
-  letter-spacing: 0.075em;
-  line-height: 1.08;
+  letter-spacing: 0.05em;
+  line-height: 1.12;
   text-align: center;
-  text-overflow: ellipsis;
   text-transform: uppercase;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .bgr-card__stats {
@@ -298,8 +330,133 @@
   letter-spacing: -0.025em;
 }
 
+/* ---------------------------------------------------------------- */
+/* Variante compact: grades densas (elenco, mercado, resumo).        */
+/* Largura vem da grade; alvo visual 145px-185px, aspecto 3/4.       */
+/* ---------------------------------------------------------------- */
+
+.bgr-card-compact {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--surface-deep);
+  color: var(--muted);
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  border-radius: 0.55rem;
+  box-shadow: 0 0.4rem 1rem rgba(0, 0, 0, 0.35);
+  isolation: isolate;
+}
+
+.bgr-card-compact__artwork {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 115%, var(--glow), transparent 55%),
+    linear-gradient(150deg, color-mix(in srgb, var(--surface) 78%, white), var(--surface-deep));
+}
+
+.bgr-card-compact__artwork .bgr-card__image,
+.bgr-card-compact__artwork .bgr-card__image-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.bgr-card-compact__chip {
+  position: absolute;
+  top: 4%;
+  left: 4%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5cqw;
+  padding: 2cqw 4cqw;
+  border-radius: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--surface-deep) 82%, transparent);
+  backdrop-filter: blur(2px);
+  line-height: 1;
+}
+
+.bgr-card-compact__overall {
+  color: var(--accent);
+  font-size: clamp(0.9rem, 11cqw, 1.5rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.bgr-card-compact__position {
+  margin-left: 2cqw;
+  color: var(--muted);
+  font-size: clamp(0.55rem, 6cqw, 0.8rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.bgr-card-compact__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5cqw;
+  padding: 3.5cqw 5cqw 4.5cqw;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--surface) 92%, black);
+}
+
+.bgr-card-compact__name {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  min-height: 2.24em;
+  color: var(--accent-strong);
+  font-size: clamp(0.68rem, 8cqw, 0.95rem);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.12;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.bgr-card-compact__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2cqw;
+  margin: 0;
+  font-size: clamp(0.55rem, 6cqw, 0.72rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bgr-card-compact__sector {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bgr-card-compact__price {
+  margin: 0;
+  color: var(--accent);
+  font-size: clamp(0.65rem, 7cqw, 0.85rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .bgr-card {
+  .bgr-card,
+  .bgr-card-compact {
     transition:
       transform 180ms ease,
       box-shadow 180ms ease;
@@ -311,13 +468,22 @@
       0 1.5rem 3.4rem rgba(0, 0, 0, 0.42),
       0 0 2.8rem var(--glow);
   }
+
+  .bgr-card-compact[data-interactive]:not([data-disabled]):hover {
+    transform: translateY(-0.15rem);
+    box-shadow:
+      0 0.6rem 1.4rem rgba(0, 0, 0, 0.4),
+      0 0 1.2rem var(--glow);
+  }
 }
 
 @media (forced-colors: active) {
   .bgr-card,
   .bgr-card__rail,
   .bgr-card__name,
-  .bgr-card__stats {
+  .bgr-card__stats,
+  .bgr-card-compact,
+  .bgr-card-compact__body {
     forced-color-adjust: auto;
   }
 }

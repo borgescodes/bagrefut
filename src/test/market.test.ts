@@ -22,6 +22,7 @@ const cards: MarketCardSummary[] = [
   {
     clubPlayerId: "00000000-0000-0000-0000-000000000001",
     playerId: "10000000-0000-0000-0000-000000000001",
+    code: "DEF01",
     name: "Zagueiro Centro",
     position: "DEF",
     rarity: "paia",
@@ -42,6 +43,7 @@ const cards: MarketCardSummary[] = [
   {
     clubPlayerId: "00000000-0000-0000-0000-000000000002",
     playerId: "10000000-0000-0000-0000-000000000002",
+    code: "ATA01",
     name: "Atacante Promessa",
     position: "ATA",
     rarity: "pika",
@@ -62,6 +64,7 @@ const cards: MarketCardSummary[] = [
   {
     clubPlayerId: "00000000-0000-0000-0000-000000000003",
     playerId: "10000000-0000-0000-0000-000000000003",
+    code: "GK01",
     name: "Goleiro Cidade Nova",
     position: "GK",
     rarity: "peba",

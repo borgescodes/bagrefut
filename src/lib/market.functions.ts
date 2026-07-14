@@ -232,7 +232,16 @@ const offerMutationResultSchema = z
 
 export const getMyRoster = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => loadRoster(context.supabase));
+  .handler(async ({ context }) => {
+    const clubResult = await context.supabase
+      .from("clubs")
+      .select("id")
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (clubResult.error) throw new Error(mapMarketErrorMessage(clubResult.error));
+    if (!clubResult.data) return [];
+    return loadRoster(context.supabase, clubResult.data.id);
+  });
 
 export const listSystemMarketStock = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -241,17 +250,23 @@ export const listSystemMarketStock = createServerFn({ method: "GET" })
 export const getMarketWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const [clubResult, roster, systemMarket] = await Promise.all([
-      context.supabase
-        .from("clubs")
-        .select("id, name, abbreviation, balance_cents")
-        .eq("owner_id", context.userId)
-        .maybeSingle(),
-      loadRoster(context.supabase),
+    const clubResult = await context.supabase
+      .from("clubs")
+      .select("id, name, abbreviation, balance_cents")
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (clubResult.error) throw new Error(mapMarketErrorMessage(clubResult.error));
+
+    const club = clubResult.data;
+    if (!club) {
+      return { club: null, roster: [], systemMarket: await loadSystemMarket(context.supabase) };
+    }
+
+    const [roster, systemMarket] = await Promise.all([
+      loadRoster(context.supabase, club.id),
       loadSystemMarket(context.supabase),
     ]);
-    if (clubResult.error) throw new Error(mapMarketErrorMessage(clubResult.error));
-    return { club: clubResult.data, roster, systemMarket };
+    return { club, roster, systemMarket };
   });
 
 export const buyPlayerFromSystem = createServerFn({ method: "POST" })
@@ -435,7 +450,10 @@ function offerMutation(
     }));
 }
 
-async function loadRoster(supabase: SupabaseClient<Database>): Promise<RosterMarketCard[]> {
+export async function loadRoster(
+  supabase: SupabaseClient<Database>,
+  clubId: string,
+): Promise<RosterMarketCard[]> {
   const { data, error } = await supabase
     .from("club_players")
     .select(
@@ -451,6 +469,7 @@ async function loadRoster(supabase: SupabaseClient<Database>): Promise<RosterMar
         club_player_attribute_progress (attribute, progress, updated_at)
       `,
     )
+    .eq("club_id", clubId)
     .order("acquired_at", { ascending: true });
   if (error) throw new Error(mapMarketErrorMessage(error));
   return z
@@ -475,7 +494,9 @@ async function loadRoster(supabase: SupabaseClient<Database>): Promise<RosterMar
     });
 }
 
-async function loadSystemMarket(supabase: SupabaseClient<Database>): Promise<SystemMarketCard[]> {
+export async function loadSystemMarket(
+  supabase: SupabaseClient<Database>,
+): Promise<SystemMarketCard[]> {
   const { data, error } = await supabase
     .from("system_market_stock")
     .select(
@@ -485,13 +506,14 @@ async function loadSystemMarket(supabase: SupabaseClient<Database>): Promise<Sys
         club_players (
           id, club_id, is_reserved,
           players (
-            id, name, position, rarity, sector, overall,
+            id, code, name, position, rarity, sector, overall,
             velocity, finishing, passing, dribbling, defending, physical, goalkeeping,
             reference_value_cents
           )
         )
       `,
     )
+    .eq("is_market_eligible", true)
     .order("acquired_at", { ascending: true });
   if (error) throw new Error(mapMarketErrorMessage(error));
   return z

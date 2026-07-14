@@ -16,11 +16,24 @@ Postgres `SECURITY DEFINER`.
 
 - Catálogo fechado: 60 jogadores únicos.
 - Seis clubes recebem 10 cartas cada no pacote inicial.
+- Pacotes são pré-definidos, balanceados e exclusivos.
 - Elenco mínimo: 5 cartas.
 - Elenco máximo: 10 cartas.
 - Saldo máximo do clube: 99.999 cents (`R$ 999,99`).
 - Preço máximo por carta: 10.000 cents (`R$ 100,00`).
 - Dinheiro máximo por anúncio/oferta: 10.000 cents (`R$ 100,00`).
+
+## Pacotes iniciais
+
+`starter_pack_templates` guarda seis composições fixas, `PACK01` a `PACK06`.
+Cada template possui exatamente 10 jogadores: 2 GK, 3 DEF, 3 MID e 2 ATA.
+
+`initial_packs.starter_pack_template_id` associa um template exclusivo ao clube.
+A atribuição ocorre aleatoriamente entre templates livres dentro da transação de
+`create_club`. A constraint `UNIQUE` impede dois clubes de receberem o mesmo pacote.
+
+`open_initial_pack` não sorteia cartas soltas. A RPC transfere exatamente os 10 jogadores
+do template associado, preserva slots e retorna os mesmos itens quando chamada novamente.
 
 ## Pool inicial e vitrine do sistema
 
@@ -49,9 +62,24 @@ A carta é permanente. Compra e venda alteram somente `club_players.club_id`; a 
 - Toda mutação de saldo passa por `_debit_wallet` ou `_credit_wallet` e grava
   `wallet_transactions` na mesma transação.
 
-## Posse e ações
+## Posse e escopo de consulta
 
-`Meu elenco` consulta somente cartas acessíveis ao clube autenticado por RLS.
+`Meu elenco` aplica filtro funcional explícito:
+
+```ts
+.eq("club_id", clubId)
+```
+
+A tela não depende somente da RLS para definir escopo. Isso impede conta admin de receber
+cartas de outros clubes ou do sistema no contador do próprio elenco.
+
+A vitrine do sistema também aplica filtro explícito:
+
+```ts
+.eq("is_market_eligible", true)
+```
+
+Pool inicial permanece invisível mesmo quando a conta possui papel admin.
 
 Usuário pode treinar, vender, anunciar ou oferecer somente carta própria. Carta de outro
 clube aparece apenas:
@@ -116,25 +144,27 @@ Reserva é criada/liberada dentro da mesma transação que altera anúncio ou of
 
 Cartas usam o componente compartilhado `PlayerCard`.
 
-- imagem: `/players/<players.id>.webp`;
+- imagem: `/players/<players.code>.webp`;
 - nome: `players.name`;
 - setor: formatado somente para display;
-- fallback visual usa identificador derivado da posição e UUID;
+- fallback visual usa nome e posição, sem exibir código técnico;
 - controles de treino/venda aparecem somente em `Meu elenco`;
 - vitrine vazia explica que estoque nasce das vendas dos clubes.
 
 ## Migrations e testes
 
-Contrato fechado:
+Contrato fechado e pacotes balanceados:
 
 - `supabase/migrations/20260710190000_closed_market_economy.sql`;
 - `supabase/migrations/20260710191000_fix_closed_market_ambiguity.sql`;
-- `supabase/tests/database/closed_market_economy.sql`.
+- `supabase/migrations/20260713160000_fair_starter_packs.sql`;
+- `supabase/tests/database/closed_market_economy.sql`;
+- `supabase/tests/database/fair_starter_packs.sql`.
 
-Teste SQL deve terminar com:
+Teste novo deve terminar com:
 
 ```text
-NOTICE: closed_market_economy contract test passed
+NOTICE: fair_starter_packs contract test passed
 ROLLBACK
 ```
 

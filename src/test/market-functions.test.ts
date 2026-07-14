@@ -2,13 +2,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import type { Database } from "@/integrations/supabase/types";
 
+type ServerFnChain = {
+  middleware: () => ServerFnChain;
+  validator: () => ServerFnChain;
+  handler: (handler: unknown) => unknown;
+};
+
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
-    const chain = {
-      middleware: () => chain,
-      validator: () => chain,
-      handler: (handler: unknown) => handler,
-    };
+    const chain = {} as ServerFnChain;
+    chain.middleware = () => chain;
+    chain.validator = () => chain;
+    chain.handler = (handler: unknown) => handler;
     return chain;
   },
 }));

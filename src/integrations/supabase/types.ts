@@ -1272,18 +1272,21 @@ export type Database = {
           acquired_from_club_id: string | null
           acquired_price_cents: number
           club_player_id: string
+          is_market_eligible: boolean
         }
         Insert: {
           acquired_at?: string
           acquired_from_club_id?: string | null
           acquired_price_cents?: number
           club_player_id: string
+          is_market_eligible?: boolean
         }
         Update: {
           acquired_at?: string
           acquired_from_club_id?: string | null
           acquired_price_cents?: number
           club_player_id?: string
+          is_market_eligible?: boolean
         }
         Relationships: [
           {

@@ -44,9 +44,11 @@
 ### Task 1: Criar teste SQL vermelho
 
 **Files:**
+
 - Create: `supabase/tests/database/fair_starter_packs.sql`
 
 **Interfaces:**
+
 - Consumes: novas tabelas e FK.
 - Produces: NOTICE `fair_starter_packs contract test passed`.
 
@@ -154,9 +156,11 @@ git commit -m "test: definir contrato dos pacotes iniciais"
 ### Task 2: Implementar migration e RPCs
 
 **Files:**
+
 - Create: `supabase/migrations/20260713160000_fair_starter_packs.sql`
 
 **Interfaces:**
+
 - Produces: `starter_pack_templates`, `starter_pack_template_items`.
 - Produces: `initial_packs.starter_pack_template_id uuid not null unique`.
 - Preserva assinatura de `create_club` e `open_initial_pack`.
@@ -421,11 +425,13 @@ git commit -m "feat: adicionar pacotes iniciais balanceados"
 ### Task 3: Adaptar testes SQL existentes
 
 **Files:**
+
 - Modify: `supabase/tests/database/open_initial_pack_concurrency.sql`
 - Modify: `supabase/tests/database/closed_market_economy.sql`
 - Modify: `supabase/tests/database/fair_starter_packs.sql`
 
 **Interfaces:**
+
 - Produces: testes independentes do estado real.
 
 - [ ] **Step 1: Criar templates fixture**
@@ -524,10 +530,12 @@ git commit -m "test: cobrir abertura deterministica de pacotes"
 ### Task 4: Corrigir mercado `60/10`
 
 **Files:**
+
 - Create: `src/test/market-functions.test.ts`
 - Modify: `src/lib/market.functions.ts`
 
 **Interfaces:**
+
 - Produces: `loadRoster(supabase, clubId)` exportada.
 - Produces: `loadSystemMarket(supabase)` exportada.
 
@@ -641,6 +649,7 @@ git commit -m "fix: limitar elenco e vitrine ao escopo correto"
 ### Task 5: Atualizar tipos Supabase
 
 **Files:**
+
 - Modify: `src/integrations/supabase/types.ts`
 
 - [ ] **Step 1: Regenerar**
@@ -657,8 +666,8 @@ Confirmar tabelas novas, relationships e:
 initial_packs: {
   Row: {
     starter_pack_template_id: string;
-  };
-};
+  }
+}
 ```
 
 - [ ] **Step 3: Validar e commit**
@@ -675,6 +684,7 @@ git commit -m "chore: atualizar tipos dos pacotes iniciais"
 ### Task 6: Documentar e verificar
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `docs/RULES.md`
 - Modify: `docs/PLAYER_CARDS.md`

@@ -12,8 +12,8 @@ export const PLAYER_CODE_RANGES = {
   ATA: 12,
 };
 
-/** Códigos com asset de foto (MID não tem foto; usa fallback visual). */
-export const EXPECTED_ASSET_CODES = ["ATA", "DEF", "GK"].flatMap((position) =>
+/** Códigos com asset de foto para o catálogo completo de 60 jogadores. */
+export const EXPECTED_ASSET_CODES = ["GK", "DEF", "MID", "ATA"].flatMap((position) =>
   Array.from(
     { length: PLAYER_CODE_RANGES[position] },
     (_, index) => `${position}${String(index + 1).padStart(2, "0")}`,

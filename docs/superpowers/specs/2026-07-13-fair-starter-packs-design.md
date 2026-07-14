@@ -214,7 +214,7 @@ Qualquer falha reverte transação completa.
 Alterar helper para receber clube explícito:
 
 ```ts
-loadRoster(supabase, clubId)
+loadRoster(supabase, clubId);
 ```
 
 Consulta inclui:

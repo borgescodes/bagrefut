@@ -1,0 +1,59 @@
+name: Package Android tooling
+
+on:
+  push:
+    branches:
+      - tooling/bagrefut-sync-build-20260902
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Select installed Android SDK components
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_HOME:-}"
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n 1)"
+          platform="$(find "$ANDROID_HOME/platforms" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n 1)"
+          test -n "$build_tools"
+          test -n "$platform"
+          printf '%s\n' "$build_tools" > /tmp/build-tools-version.txt
+          printf '%s\n' "$platform" > /tmp/platform-version.txt
+          "$ANDROID_HOME/build-tools/$build_tools/apksigner" version
+          "$ANDROID_HOME/build-tools/$build_tools/zipalign" -h >/dev/null
+
+      - name: Assemble portable tool archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_tools="$(cat /tmp/build-tools-version.txt)"
+          platform="$(cat /tmp/platform-version.txt)"
+          mkdir -p out/android-sdk/build-tools out/android-sdk/platforms out/apktool
+          cp -a "$ANDROID_HOME/build-tools/$build_tools" "out/android-sdk/build-tools/"
+          cp "$ANDROID_HOME/platforms/$platform/android.jar" "out/android-sdk/platforms/android.jar"
+          cp /tmp/build-tools-version.txt out/
+          cp /tmp/platform-version.txt out/
+          curl --fail --location --retry 3 \
+            --output out/apktool/apktool_3.0.3.jar \
+            https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
+          printf '%s  %s\n' \
+            dbf930b076c6b9be08d57c449cacefc3bdd6b71ebd59b3066fc0e1f5b14f9423 \
+            out/apktool/apktool_3.0.3.jar | sha256sum --check --strict
+          tar -C out -czf bagrefut-android-tooling.tar.gz .
+          sha256sum bagrefut-android-tooling.tar.gz > bagrefut-android-tooling.tar.gz.sha256
+
+      - name: Upload tooling archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: bagrefut-android-tooling
+          path: |
+            bagrefut-android-tooling.tar.gz
+            bagrefut-android-tooling.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0

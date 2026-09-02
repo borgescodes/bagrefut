@@ -22,10 +22,11 @@ jobs:
           platform="$(find "$ANDROID_HOME/platforms" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n 1)"
           test -n "$build_tools"
           test -n "$platform"
+          test -x "$ANDROID_HOME/build-tools/$build_tools/apksigner"
+          test -x "$ANDROID_HOME/build-tools/$build_tools/zipalign"
           printf '%s\n' "$build_tools" > /tmp/build-tools-version.txt
           printf '%s\n' "$platform" > /tmp/platform-version.txt
           "$ANDROID_HOME/build-tools/$build_tools/apksigner" version
-          "$ANDROID_HOME/build-tools/$build_tools/zipalign" -h >/dev/null
 
       - name: Assemble portable tool archive
         shell: bash

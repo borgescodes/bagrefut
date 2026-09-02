@@ -1,0 +1,59 @@
+name: Package Il2CppDumper runtime
+
+on:
+  push:
+    branches:
+      - tooling/bagrefut-sync-build-20260902
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download official Il2CppDumper release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/app out/dotnet
+          curl --fail --location --retry 3 \
+            --output /tmp/il2cppdumper.zip \
+            https://github.com/Perfare/Il2CppDumper/releases/download/v6.7.46/Il2CppDumper-net7-v6.7.46.zip
+          unzip -q /tmp/il2cppdumper.zip -d out/app
+          curl --fail --location --retry 3 \
+            --output /tmp/dotnet-install.sh \
+            https://dot.net/v1/dotnet-install.sh
+          bash /tmp/dotnet-install.sh \
+            --runtime dotnet \
+            --version 7.0.20 \
+            --install-dir out/dotnet \
+            --no-path
+          test -f out/app/Il2CppDumper.dll
+          out/dotnet/dotnet out/app/Il2CppDumper.dll --help >/tmp/help.txt 2>&1 || true
+
+      - name: Assemble portable archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > out/run-il2cppdumper.sh <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          ROOT="$(cd "$(dirname "$0")" && pwd)"
+          exec "$ROOT/dotnet/dotnet" "$ROOT/app/Il2CppDumper.dll" "$@"
+          SH
+          chmod +x out/run-il2cppdumper.sh
+          tar -C out -czf il2cppdumper-linux-portable.tar.gz .
+          sha256sum il2cppdumper-linux-portable.tar.gz > il2cppdumper-linux-portable.tar.gz.sha256
+
+      - name: Upload portable tool
+        uses: actions/upload-artifact@v4
+        with:
+          name: il2cppdumper-linux-portable
+          path: |
+            il2cppdumper-linux-portable.tar.gz
+            il2cppdumper-linux-portable.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
